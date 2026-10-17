@@ -1,0 +1,21 @@
+# 构建产物
+build/
+.gradle/
+.gradle-local/
+local.properties
+*.iml
+.idea/
+.vscode/
+.settings/
+
+# 密钥与凭证
+*.jks
+*.keystore
+*.pk8
+*.p7b
+
+# 系统
+.DS_Store
+
+# 输出（保留 dist/ 与 apk/ 供分发）
+/Release
