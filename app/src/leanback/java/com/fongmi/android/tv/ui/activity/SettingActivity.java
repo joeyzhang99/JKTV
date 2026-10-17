@@ -233,7 +233,8 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     }
 
     private void onVersion(View view) {
-        Updater.create().force().start(this);
+        // 手动检查更新：无视"自动检查"开关，并在无新版本时明确提示
+        Updater.create().force().start(this, true);
     }
 
     private void setWallDefault(View view) {

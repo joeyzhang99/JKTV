@@ -79,7 +79,7 @@ public class HomeActivity extends BaseActivity implements NavigationBarView.OnIt
         mBinding.navigation.setOnItemSelectedListener(this);
         PermissionUtil.requestNotify(this);
         initFragment(savedInstanceState);
-        Updater.create().start(this);
+        Updater.create().start(this, false);
         initConfig();
     }
 

@@ -121,7 +121,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mBinding.progressLayout.showProgress();
         PermissionUtil.requestNotify(this);
         DLNARendererService.start(this);
-        Updater.create().start(this);
+        Updater.create().start(this, false);
         setRecyclerView();
         setViewModel();
         setAdapter();

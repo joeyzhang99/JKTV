@@ -30,10 +30,11 @@ versionCode = MAJOR × 10000 + MINOR × 100 + PATCH
 ## 文件命名
 
 ```
-JKTV-V1.0.0-leanback-armeabi-v7a.apk
-JKTV-V1.0.0-leanback-arm64-v8a.apk
-JKTV-V1.0.0-mobile-arm64-v8a.apk
+JKTV-V1.1.0-leanback-armeabi-v7a.apk    # 32 位电视版
+JKTV-V1.1.0-leanback-arm64-v8a.apk      # 64 位电视版（V8）
 ```
+
+两个 ABI 共用同一 versionCode / versionName，分别上传到同一 Release。
 
 ## 发布流程
 
@@ -46,3 +47,4 @@ JKTV-V1.0.0-mobile-arm64-v8a.apk
 | 版本 | 日期 | 类型 | 说明 |
 |---|---|---|---|
 | `V1.0.0` | 2026-10-18 | MAJOR | 首个版本：基于 FongMi TV 上游，ExoPlayer + FFmpeg 双内核 |
+| `V1.1.0` | 2026-10-18 | MINOR | 新增双 ABI 构建（armv7 + V8/arm64-v8a）；重写自动更新为四通道 + SHA-256 校验 + 手动检查 |

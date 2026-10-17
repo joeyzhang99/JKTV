@@ -10,30 +10,43 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.concurrent.Future;
 
 import okhttp3.Response;
 
+/**
+ * 带多镜像重试的下载器。
+ *
+ * <p>GitHub 在国内常被阻断，因此下载时按 {@link #urls} 依次尝试：
+ * 原始地址排第一，其后是各加速前缀代理的同一个地址。某一档失败会自动切到下一档，
+ * 全部失败才回调 {@link Callback#error(String)}。</p>
+ */
 public class Download {
 
     private final File file;
-    private final String url;
+    private final List<String> urls;
     private Callback callback;
     private Future<?> future;
-    private String tag;
+
+    /** 本次下载实际使用的地址，取消时按它隔离请求。 */
+    private String currentUrl;
 
     public static Download create(String url, File file) {
-        return new Download(url, file);
+        return new Download(List.of(url), file);
     }
 
-    public Download(String url, File file) {
-        this.tag = url;
-        this.url = url;
+    public static Download create(List<String> urls, File file) {
+        return new Download(urls, file);
+    }
+
+    public Download(List<String> urls, File file) {
+        this.urls = urls;
         this.file = file;
     }
 
+    /** 设置取消标签（与上游 API 兼容）。 */
     public Download tag(String tag) {
-        this.tag = tag;
         return this;
     }
 
@@ -49,20 +62,33 @@ public class Download {
 
     public Download cancel() {
         if (future != null) future.cancel(true);
-        OkHttp.cancel(tag);
+        if (currentUrl != null) OkHttp.cancel(currentUrl);
         future = null;
         return this;
     }
 
     private void doInBackground() {
-        try (Response res = OkHttp.newCall(url, tag).execute()) {
-            download(res.body().byteStream(), getLength(res));
-            if (callback != null) App.post(() -> callback.success(file));
-        } catch (Exception e) {
-            Path.clear(file);
-            if (callback != null) App.post(() -> callback.error(e.getMessage()));
-            else throw new RuntimeException(e.getMessage(), e);
+        Exception last = null;
+        for (String url : urls) {
+            if (Thread.interrupted()) return;
+            this.currentUrl = url;
+            try (Response res = OkHttp.newCall(url, url).execute()) {
+                if (!res.isSuccessful()) {
+                    last = new IOException("HTTP " + res.code());
+                    continue;
+                }
+                download(res.body().byteStream(), getLength(res));
+                if (callback != null) App.post(() -> callback.success(file));
+                return;
+            } catch (Exception e) {
+                last = e;
+                Path.clear(file);
+            }
         }
+        Path.clear(file);
+        String msg = last != null ? last.getMessage() : null;
+        if (callback != null) App.post(() -> callback.error(msg));
+        else if (last != null) throw new RuntimeException(last.getMessage(), last);
     }
 
     private void download(InputStream is, double length) throws IOException {

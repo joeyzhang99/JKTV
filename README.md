@@ -4,7 +4,7 @@
 
 > **JKTV 本身不内置、不提供任何内容来源。** 所有片源需用户自行配置。
 
-[![version](https://img.shields.io/badge/version-JKTV--V1.0.0-c0392b)]()
+[![version](https://img.shields.io/badge/version-JKTV--V1.1.0-c0392b)]()
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)]()
 [![platform](https://img.shields.io/badge/Android-7.0%2B%20%7C%20minSdk%2024-3ddc84)]()
 
@@ -40,7 +40,28 @@ JKTV 是一个**播放器外壳**：它不含任何影视内容，只提供
 - **浏览**：分类筛选、搜索、播放记录、收藏、无痕模式
 - **直播**：M3U/TXT/JSON 播放列表、XMLTV 节目单、回看
 - **互通**：DLNA 投放/接收、本地 HTTP 控制（手机遥控电视）
-- **自动更新**：GitHub + 两个加速镜像 + jsDelivr 四通道，SHA-256 校验
+- **自动更新**：GitHub + ghproxy.net + gh-proxy.com + jsDelivr 四通道；SHA-256 校验；支持手动检查
+
+### 更新机制
+
+JKTV 的更新检查按以下顺序尝试，某一档失效会自动切换下一档：
+
+| 顺序 | 通道 | 说明 |
+|---|---|---|
+| 1 | GitHub raw 直链 | VPN / 海外网络下最快 |
+| 2 | `ghproxy.net` | 国内移动网络实测稳定 1–2 秒 |
+| 3 | `gh-proxy.com` | 正常但波动（0.5–9 秒） |
+| 4 | `cdn.jsdelivr.net` | 兜底；分支引用有 12 小时缓存 |
+
+**两种触发方式**
+- **自动检查**：启动时静默检查，受设置里「自动更新」开关控制，发现新版本后弹窗询问
+- **手动检查**：设置 → 版本，无条件检查，并提示「已是最新版本」或具体失败原因
+
+**完整性校验**：下载完成后按清单内 SHA-256 校验，不匹配则删除文件并中止安装，
+避免被劫持的镜像或损坏的下载污染安装。
+
+清单按 ABI 分离：32 位读 `apk/leanback.json`，64 位读 `apk/leanback-arm64-v8a.json`，
+避免下载到架构不匹配的 APK。
 
 ## 安装
 
@@ -48,9 +69,8 @@ JKTV 是一个**播放器外壳**：它不含任何影视内容，只提供
 
 | 设备 | 文件 |
 |---|---|
-| 电视 / 盒子（32 位） | `JKTV-V1.0.0-leanback-armeabi-v7a.apk` |
-| 电视 / 盒子（64 位） | `JKTV-V1.0.0-leanback-arm64-v8a.apk` |
-| 手机 | `JKTV-V1.0.0-mobile-arm64-v8a.apk` |
+| 电视 / 盒子（**32 位 armv7**，如 TCL 55Q9K） | `JKTV-V1.1.0-leanback-armeabi-v7a.apk` |
+| 电视 / 盒子（**64 位 V8 / arm64-v8a**） | `JKTV-V1.1.0-leanback-arm64-v8a.apk` |
 
 > 注意：不同签名的 APK 不能覆盖安装。切换来源前请先卸载。
 
