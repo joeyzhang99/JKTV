@@ -40,18 +40,30 @@ JKTV 是一个**播放器外壳**：它不含任何影视内容，只提供
 - **浏览**：分类筛选、搜索、播放记录、收藏、无痕模式
 - **直播**：M3U/TXT/JSON 播放列表、XMLTV 节目单、回看
 - **互通**：DLNA 投放/接收、本地 HTTP 控制（手机遥控电视）
-- **自动更新**：GitHub + ghproxy.net + gh-proxy.com + jsDelivr 四通道；SHA-256 校验；支持手动检查
+- **自动更新**：三档国内镜像 + GitHub 直链；SHA-256 校验；支持手动检查
 
 ### 更新机制
 
 JKTV 的更新检查按以下顺序尝试，某一档失效会自动切换下一档：
 
-| 顺序 | 通道 | 说明 |
+**检查更新**（读 `raw.githubusercontent.com` 上的清单）：
+
+| 顺序 | 通道 | 中国移动实测（无 VPN，2026-10-18） |
 |---|---|---|
-| 1 | GitHub raw 直链 | VPN / 海外网络下最快 |
-| 2 | `ghproxy.net` | 国内移动网络实测稳定 1–2 秒 |
-| 3 | `gh-proxy.com` | 正常但波动（0.5–9 秒） |
-| 4 | `cdn.jsdelivr.net` | 兜底；分支引用有 12 小时缓存 |
+| 1 | `ghproxy.cn` | ✅ 0.79s（最快） |
+| 2 | `gh-proxy.com` | ✅ 0.64s |
+| 3 | `ghproxy.net` | ✅ 1.31s |
+| 4 | GitHub raw 直链 | ❌ 不通（VPN / 海外网络下可用） |
+
+**下载 APK**（读 `github.com/.../releases/download`）：
+
+| 顺序 | 通道 | 中国移动实测 |
+|---|---|---|
+| 1 | `ghproxy.cn` | ✅ 0.92s |
+| 2 | `ghproxy.net` | ✅ 185 KB/s |
+| — | `gh-proxy.com` | ❌ **不支持 Releases 资产（返回 404）**，已从下载列表移除 |
+
+> 已按实测移除 `cdn.jsdelivr.net`（DNS 解析失败）与 `ghfast.top`（连接挂住不返回）。
 
 **两种触发方式**
 - **自动检查**：启动时静默检查，受设置里「自动更新」开关控制，发现新版本后弹窗询问

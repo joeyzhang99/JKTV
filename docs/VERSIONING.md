@@ -48,3 +48,4 @@ JKTV-V1.1.0-leanback-arm64-v8a.apk      # 64 位电视版（V8）
 |---|---|---|---|
 | `V1.0.0` | 2026-10-18 | MAJOR | 首个版本：基于 FongMi TV 上游，ExoPlayer + FFmpeg 双内核 |
 | `V1.1.0` | 2026-10-18 | MINOR | 新增双 ABI 构建（armv7 + V8/arm64-v8a）；重写自动更新为四通道 + SHA-256 校验 + 手动检查 |
+| `V1.1.1` | 2026-10-18 | PATCH | 修正更新通道顺序（按中国移动无 VPN 实测）；移除不通的 jsDelivr 与 ghfast.top；新增 ghproxy.cn |

@@ -19,3 +19,4 @@ local.properties
 
 # 输出（保留 dist/ 与 apk/ 供分发）
 /Release
+apk/*.apk
