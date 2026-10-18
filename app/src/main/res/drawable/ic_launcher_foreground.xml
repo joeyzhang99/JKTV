@@ -3,77 +3,114 @@
     android:height="108dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-    <!-- JKTV 动漫风小猫（自适应图标前景，可见安全区 72/108，缩放 0.66 居中） -->
-    <group
-        android:scaleX="0.66"
-        android:scaleY="0.66"
-        android:translateX="87.04"
-        android:translateY="87.04">
+    <!-- JKTV 全身坐姿猫：短尾贴身、前脚分瓣、黄色项圈铃铛。
+         自适应图标可见安全区约 72/108，内容画满 512 后由系统裁切，
+         故各元素已控制在中心区域（x:112-400, y:36-452）。 -->
+    <group>
+        <!-- 身体（铃形） -->
+        <path
+            android:fillColor="#FFF6FA"
+            android:pathData="M256,190 C188,190 152,262 148,346 C146,400 180,426 256,426 C332,426 366,400 364,346 C360,262 324,190 256,190 Z" />
+        <!-- 尾巴（短，右侧贴脚） -->
+        <path
+            android:strokeColor="#FFF6FA"
+            android:strokeWidth="22"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M356,392 Q386,404 372,426 Q360,440 330,436" />
+        <!-- 尾尖 -->
+        <path
+            android:fillColor="#FFB8D0"
+            android:pathData="M330,436 m-11,0 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0" />
+        <!-- 前腿分隔 -->
+        <path
+            android:strokeColor="#FFE1EC"
+            android:strokeWidth="8"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M234,362 L234,410 M278,362 L278,410" />
+        <!-- 前脚 -->
+        <path
+            android:fillColor="#FFF6FA"
+            android:strokeColor="#FFE1EC"
+            android:strokeWidth="5"
+            android:pathData="M222,422 m-25,0 a25,14 0 1,0 50,0 a25,14 0 1,0 -50,0" />
+        <path
+            android:fillColor="#FFF6FA"
+            android:strokeColor="#FFE1EC"
+            android:strokeWidth="5"
+            android:pathData="M290,422 m-25,0 a25,14 0 1,0 50,0 a25,14 0 1,0 -50,0" />
+        <path
+            android:strokeColor="#FFE1EC"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M214,417 L214,425 M230,417 L230,425 M282,417 L282,425 M298,417 L298,425" />
+        <!-- 耳朵 -->
+        <path
+            android:fillColor="#FFF6FA"
+            android:pathData="M156,148 L126,40 L238,108 Z" />
+        <path
+            android:fillColor="#FFF6FA"
+            android:pathData="M356,148 L386,40 L274,108 Z" />
+        <path
+            android:fillColor="#FFB8D0"
+            android:pathData="M166,136 L150,72 L212,112 Z" />
+        <path
+            android:fillColor="#FFB8D0"
+            android:pathData="M346,136 L362,72 L300,112 Z" />
         <!-- 头 -->
         <path
             android:fillColor="#FFF6FA"
-            android:strokeColor="#E0688C"
-            android:strokeWidth="16"
-            android:pathData="M256,186 m-152,0 a152,130 0 1,0 304,0 a152,130 0 1,0 -304,0" />
-        <!-- 左耳 -->
-        <path
-            android:fillColor="#FFF6FA"
-            android:strokeColor="#E0688C"
-            android:strokeWidth="18"
-            android:strokeLineJoin="round"
-            android:pathData="M150,146 L112,10 L238,92 Z" />
-        <!-- 右耳 -->
-        <path
-            android:fillColor="#FFF6FA"
-            android:strokeColor="#E0688C"
-            android:strokeWidth="18"
-            android:strokeLineJoin="round"
-            android:pathData="M362,146 L400,10 L274,92 Z" />
-        <path
-            android:fillColor="#FFB8D0"
-            android:pathData="M158,132 L138,48 L210,98 Z" />
-        <path
-            android:fillColor="#FFB8D0"
-            android:pathData="M354,132 L374,48 L302,98 Z" />
+            android:pathData="M256,160 m-128,0 a128,110 0 1,0 256,0 a128,110 0 1,0 -256,0" />
         <!-- 眼睛 -->
         <path
             android:fillColor="#3A2430"
-            android:pathData="M204,284 m-36,0 a36,42 0 1,0 72,0 a36,42 0 1,0 -72,0" />
+            android:pathData="M208,168 m-21,0 a21,25 0 1,0 42,0 a21,25 0 1,0 -42,0" />
         <path
             android:fillColor="#3A2430"
-            android:pathData="M308,284 m-36,0 a36,42 0 1,0 72,0 a36,42 0 1,0 -72,0" />
+            android:pathData="M304,168 m-21,0 a21,25 0 1,0 42,0 a21,25 0 1,0 -42,0" />
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M215,271 m-13,0 a13,16 0 1,0 26,0 a13,16 0 1,0 -26,0" />
+            android:pathData="M216,159 m-8,0 a8,10 0 1,0 16,0 a8,10 0 1,0 -16,0" />
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M319,271 m-13,0 a13,16 0 1,0 26,0 a13,16 0 1,0 -26,0" />
+            android:pathData="M312,159 m-8,0 a8,10 0 1,0 16,0 a8,10 0 1,0 -16,0" />
         <path
             android:fillColor="#FFFFFF"
-            android:fillAlpha="0.9"
-            android:pathData="M196,297 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" />
+            android:fillAlpha="0.85"
+            android:pathData="M204,180 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
         <path
             android:fillColor="#FFFFFF"
-            android:fillAlpha="0.9"
-            android:pathData="M300,297 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" />
-        <!-- 腮红 -->
-        <path
-            android:fillColor="#FF9EBB"
-            android:fillAlpha="0.75"
-            android:pathData="M152,334 m-29,0 a29,18 0 1,0 58,0 a29,18 0 1,0 -58,0" />
-        <path
-            android:fillColor="#FF9EBB"
-            android:fillAlpha="0.75"
-            android:pathData="M360,334 m-29,0 a29,18 0 1,0 58,0 a29,18 0 1,0 -58,0" />
+            android:fillAlpha="0.85"
+            android:pathData="M300,180 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
         <!-- 鼻与嘴 -->
         <path
             android:fillColor="#E0688C"
-            android:pathData="M256,322 L240,314 L272,314 Z" />
+            android:pathData="M256,194 L244,186 L268,186 Z" />
         <path
             android:strokeColor="#C4517A"
-            android:strokeWidth="9"
+            android:strokeWidth="7"
             android:strokeLineCap="round"
             android:fillColor="#00000000"
-            android:pathData="M256,322 L256,334 M256,334 Q241,346 229,336 M256,334 Q271,346 283,336" />
+            android:pathData="M256,194 L256,205 M256,205 Q245,215 235,207 M256,205 Q267,215 277,207" />
+        <!-- 胡须 -->
+        <path
+            android:strokeColor="#E0688C"
+            android:strokeAlpha="0.6"
+            android:strokeWidth="6"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M150,196 L118,190 M152,212 L122,216 M362,196 L394,190 M360,212 L390,216" />
+        <!-- 项圈与铃铛 -->
+        <path
+            android:fillColor="#FBBF24"
+            android:pathData="M204,248 h104 a9,9 0 0 1 9,9 v0 a9,9 0 0 1 -9,9 h-104 a9,9 0 0 1 -9,-9 v0 a9,9 0 0 1 9,-9 Z" />
+        <path
+            android:fillColor="#FBBF24"
+            android:pathData="M256,278 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" />
+        <path
+            android:fillColor="#FDE68A"
+            android:pathData="M256,273 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
     </group>
 </vector>
