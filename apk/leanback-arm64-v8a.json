@@ -1,8 +1,8 @@
 {
-  "name": "JKTV-V1.2.6",
-  "code": 10206,
-  "tag": "v1.2.6",
-  "url": "https://github.com/joeyzhang99/JKTV/releases/download/v1.2.6/JKTV-V1.2.6-leanback-armeabi-v7a.apk",
-  "sha_url": "https://github.com/joeyzhang99/JKTV/releases/download/v1.2.6/SHA256SUMS.txt",
-  "desc": "JKTV V1.2.6\n\nSHA-256: fd1d871ee0220ed7c8f652d5e3c35da635b6b08e953d33fa97e13d69e4bebf25"
+  "name": "JKTV-V1.2.7",
+  "code": 10207,
+  "tag": "v1.2.7",
+  "url": "https://github.com/joeyzhang99/JKTV/releases/download/v1.2.7/JKTV-V1.2.7-leanback-armeabi-v7a.apk",
+  "sha_url": "https://github.com/joeyzhang99/JKTV/releases/download/v1.2.7/SHA256SUMS.txt",
+  "desc": "JKTV V1.2.7\n\nSHA-256: b4541cd1ada25a379648954a8499248448d0fb19bcab40c67823ec88cceea941"
 }

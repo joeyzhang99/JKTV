@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- JKTV: 动漫风小猫图标背景（粉→玫红渐变） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#FFB4C8"
+        android:centerColor="#FF87A3"
+        android:endColor="#F2607E"
+        android:type="linear" />
+</shape>
