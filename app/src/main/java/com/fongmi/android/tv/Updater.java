@@ -130,6 +130,9 @@ public class Updater implements Download.Callback, UpdateListener {
     /**
      * 依次尝试各通道读取版本清单。
      *
+     * <p><b>关键</b>：必须以"能否解析出合法 JSON 且含 code/name 字段"判定成功，
+     * 而不能只看 HTTP 状态码——ghproxy.cn 会返回 200 但内容是安全验证 HTML 页。</p>
+     *
      * @return 解析成功的清单；全部通道失败时返回 null
      */
     private JSONObject fetchManifest() {
@@ -138,7 +141,10 @@ public class Updater implements Download.Callback, UpdateListener {
             try {
                 String body = OkHttp.newCall(url, channelTag(url)).execute().body().string();
                 if (body == null || body.isEmpty()) continue;
-                JSONObject object = new JSONObject(body);
+                // 镜像可能返回 HTML 验证页：trim 后必须以 { 开头才是 JSON
+                String trimmed = body.trim();
+                if (!trimmed.startsWith("{")) continue;
+                JSONObject object = new JSONObject(trimmed);
                 if (object.has("code") && object.has("name")) {
                     this.channel = Github.channelLabel(url);
                     return object;

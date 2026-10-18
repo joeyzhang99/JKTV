@@ -9,18 +9,18 @@ import java.util.List;
  * GitHub 在国内（中国移动等）常被阻断，因此检查更新与下载 APK 都准备多条备用路径，
  * 按实测稳定性排序依次尝试。某一档失效只会多花一次连接超时，不影响后续档位。
  *
- * <h3>2026-10-18 中国移动实测（无 VPN）</h3>
+ * <h3>2026-10-18 中国移动实测（无 VPN，必须返回合法 JSON 而非 HTML 验证页）</h3>
  * <ul>
  *   <li>raw.githubusercontent.com 直连 —— <b>不通</b></li>
- *   <li>ghproxy.cn          —— 0.79s ✅ 最快</li>
- *   <li>gh-proxy.com        —— 0.64s ✅</li>
- *   <li>ghproxy.net         —— 1.31s ✅</li>
+ *   <li>gh-proxy.com        —— ✅ 0.64s，返回正确 JSON</li>
+ *   <li>ghproxy.net         —— ✅ 1.31s，但<b>有缓存</b>（曾返回上一版清单）</li>
+ *   <li>ghproxy.cn          —— ❌ <b>返回 672 安全验证 HTML 页</b>（HTTP 200 但非 JSON，陷阱）</li>
  *   <li>cdn.jsdelivr.net    —— <b>不通</b>（DNS 解析失败）</li>
  *   <li>ghfast.top          —— <b>不通</b>（连接挂住不返回）</li>
  * </ul>
  *
- * 因此通道顺序为：两个最快的国内镜像在前，GitHub 直链保留给 VPN/海外网络，
- * 不通的 ghfast.top 与 jsDelivr 已移除（留着只会让用户白等超时）。
+ * <b>重要教训</b>：不能只看 HTTP 状态码。ghproxy.cn 返回 200 但内容是安全验证页，
+ * 因此 {@link Updater} 在解析 JSON 失败后会继续尝试下一通道，而不是当作成功。
  */
 public class Github {
 
@@ -35,20 +35,20 @@ public class Github {
     public static final String RELEASES_BASE =
             "https://github.com/" + REPO + "/releases/download";
 
-    /** 加速前缀，按尝试顺序（实测越快越靠前）。 */
+    /** 检查更新用的加速前缀，按实测可用性排序。 */
     public static final List<String> PREFIXES = List.of(
-            "https://ghproxy.cn/",
-            "https://ghproxy.net/",
-            "https://gh-proxy.com/"
+            "https://gh-proxy.com/",
+            "https://ghproxy.net/"
     );
 
     /**
      * 下载 APK 用的加速前缀。
      *
-     * <p>与 {@link #PREFIXES} 不同：各镜像对 GitHub Releases 资产的支持不一致
-     * （gh-proxy.com 对 releases/download 返回 404），因此单独维护一份经验证可用的列表。</p>
+     * <p>与 {@link #PREFIXES} 分开维护：各镜像对 GitHub Releases 资产的支持不一致
+     * （gh-proxy.com 对 releases/download 返回 404）。</p>
      *
-     * <p>2026-10-18 中国移动实测（releases/download）：ghproxy.cn ✅ / ghproxy.net ✅ / gh-proxy.com ❌</p>
+     * <p>2026-10-18 中国移动实测（releases/download）：ghproxy.cn ✅ / ghproxy.net ✅ /
+     * gh-proxy.com ❌ 404。</p>
      */
     public static final List<String> DOWNLOAD_PREFIXES = List.of(
             "https://ghproxy.cn/",
