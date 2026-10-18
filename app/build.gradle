@@ -16,8 +16,8 @@ android {
         applicationId "com.jktv.android.tv"
         minSdk libs.versions.minSdk.get().toInteger()
         targetSdk libs.versions.targetSdk.get().toInteger()
-        versionCode 10203
-        versionName "JKTV-V1.2.3"
+        versionCode 10204
+        versionName "JKTV-V1.2.4"
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString(), "eventBusIndex": "com.fongmi.android.tv.event.EventIndex"]

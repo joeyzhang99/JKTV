@@ -55,13 +55,14 @@ public class Updater implements Download.Callback, UpdateListener {
     /** 清单里的完整 APK 地址（发布时生成，必然与 Release 资产一致）。 */
     private String url;
 
+    /** SHA256SUMS.txt 地址（与 XPplay 一致，用于校验下载完整性）。 */
+    private String checksumsUrl;
+
     /** 本次检查/下载实际使用的通道，用于给用户展示。 */
     private String channel = "GitHub";
 
     private Updater() {
-        this.download = Download.create(
-                Github.downloadUrls(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi, null),
-                getFile());
+        this.download = Download.create(List.of(), getFile());
     }
 
     /**
@@ -70,13 +71,12 @@ public class Updater implements Download.Callback, UpdateListener {
      * <p>JKTV 修复：原先下载地址里的 tag 是硬编码的，导致「检查更新显示新版本，
      * 点更新却去旧 tag 下文件」而静默 404。现在从清单取值，保证与实际 Release 一致。</p>
      */
-    private void applyTag(String tag, String url) {
-        if ((tag == null || tag.isEmpty()) && (url == null || url.isEmpty())) return;
-        if (tag != null && tag.equals(this.tag) && url != null && url.equals(this.url)) return;
+    private void applyAsset(String tag, String assetUrl, String sumsUrl) {
+        if (assetUrl == null || assetUrl.isEmpty()) return;
         this.tag = tag;
-        this.url = url;
-        this.download.reset(Github.downloadUrlsFromManifest(url,
-                BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi, tag));
+        this.url = assetUrl;
+        this.checksumsUrl = sumsUrl;
+        this.download.reset(Github.downloadUrls(assetUrl));
     }
 
     public static Updater create() {
@@ -126,18 +126,17 @@ public class Updater implements Download.Callback, UpdateListener {
 
     private void doInBackground(FragmentActivity activity, boolean manual) {
         try {
-            JSONObject object = fetchManifest();
-            if (object == null) {
+            Manifest m = fetchManifest();
+            if (m == null) {
                 if (manual) App.post(() -> Notify.show(R.string.update_fail));
                 return;
             }
-            String name = object.optString("name");
-            String desc = object.optString("desc");
-            int code = object.optInt("code");
-            if (code <= BuildConfig.VERSION_CODE) {
+            if (m.code <= BuildConfig.VERSION_CODE) {
                 if (manual) App.post(() -> Notify.show(R.string.update_latest));
                 return;
             }
+            String name = m.name.isEmpty() ? ("JKTV " + m.tag) : m.name;
+            String desc = ResUtil.getString(R.string.update_desc_sha, m.assetUrl);
             App.post(() -> show(activity, name, desc));
         } catch (Exception e) {
             e.printStackTrace();
@@ -153,27 +152,101 @@ public class Updater implements Download.Callback, UpdateListener {
      *
      * @return 解析成功的清单；全部通道失败时返回 null
      */
-    private JSONObject fetchManifest() {
-        List<String> urls = Github.catalogUrls(manifestName());
-        for (String url : urls) {
+    private Manifest fetchManifest() {
+        for (String url : Github.catalogUrls()) {
             try {
                 String body = OkHttp.newCall(url, channelTag(url)).execute().body().string();
                 if (body == null || body.isEmpty()) continue;
-                // 镜像可能返回 HTML 验证页：trim 后必须以 { 开头才是 JSON
                 String trimmed = body.trim();
-                if (!trimmed.startsWith("{")) continue;
-                JSONObject object = new JSONObject(trimmed);
-                if (object.has("code") && object.has("name")) {
-                    this.channel = Github.channelLabel(url);
-                    // JKTV: 清单里的 tag 即为 APK 所在 Release，据此修正下载地址
-                    applyTag(object.optString("tag"), object.optString("url"));
-                    return object;
-                }
+                // 镜像可能返回 HTML 验证页：必须以 { 或 [ 开头才是 JSON
+                if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) continue;
+                Manifest m = Manifest.parse(trimmed);
+                if (m == null) continue;
+                this.channel = Github.channelLabel(url);
+                applyAsset(m.tag, m.assetUrl, m.sumsUrl);
+                return m;
             } catch (Exception ignored) {
                 // 该通道失败，尝试下一个
             }
         }
         return null;
+    }
+
+    /**
+     * 版本清单。
+     *
+     * <p>兼容两种格式：</p>
+     * <ol>
+     *   <li><b>GitHub Releases 原生格式</b>（XPplay 同构）：
+     *       <code>[{tag_name, assets:[{name, browser_download_url}]}]</code>，
+     *       同时接受 {@code api.github.com} 响应与仓库内 version.json。</li>
+     *   <li><b>JKTV 扁平格式</b>：<code>{name, code, url}</code>。</li>
+     * </ol>
+     */
+    private static final class Manifest {
+        String tag = "";
+        String name = "";
+        int code;
+        String assetUrl = "";
+        String sumsUrl = "";
+
+        static Manifest parse(String body) throws Exception {
+            Manifest m = new Manifest();
+            if (body.startsWith("[")) {
+                org.json.JSONArray arr = new org.json.JSONArray(body);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject o = arr.optJSONObject(i);
+                    if (o == null) continue;
+                    if (o.optBoolean("draft")) continue;
+                    org.json.JSONArray assets = o.optJSONArray("assets");
+                    if (assets == null) continue;
+                    m.tag = o.optString("tag_name");
+                    m.name = o.optString("name");
+                    // 从资产名解析版本号：JKTV-V1.2.4-xxx.apk → 1.2.4
+                    for (int j = 0; j < assets.length(); j++) {
+                        JSONObject a = assets.optJSONObject(j);
+                        if (a == null) continue;
+                        String n = a.optString("name");
+                        if (n.endsWith(".apk") && m.assetUrl.isEmpty()) {
+                            m.assetUrl = a.optString("browser_download_url");
+                            m.code = versionCodeOf(m.tag, n);
+                        } else if ("SHA256SUMS.txt".equalsIgnoreCase(n)) {
+                            m.sumsUrl = a.optString("browser_download_url");
+                        }
+                    }
+                    if (!m.assetUrl.isEmpty()) return m;
+                }
+                return null;
+            }
+            JSONObject o = new JSONObject(body);
+            m.name = o.optString("name");
+            m.code = o.optInt("code");
+            m.tag = o.optString("tag");
+            m.assetUrl = o.optString("url");
+            m.sumsUrl = o.optString("sha_url");
+            return (m.code > 0 || !m.assetUrl.isEmpty()) ? m : null;
+        }
+
+        /** 由 tag 或资产名解析 versionCode：v1.2.4 → 10204 */
+        private static int versionCodeOf(String tag, String assetName) {
+            String t = (tag == null || tag.isEmpty()) ? assetName : tag;
+            int i = t.indexOf('v') >= 0 ? t.indexOf('v') + 1 : 0;
+            StringBuilder digits = new StringBuilder();
+            for (int k = i; k < t.length(); k++) {
+                char c = t.charAt(k);
+                if (Character.isDigit(c)) digits.append(c);
+                else if (c == '.' && digits.length() > 0 && digits.charAt(digits.length() - 1) != '.') {
+                    digits.append('.');
+                }
+            }
+            String[] p = digits.toString().split("\\.");
+            if (p.length < 3) return 0;
+            try {
+                return Integer.parseInt(p[0]) * 10000 + Integer.parseInt(p[1]) * 100 + Integer.parseInt(p[2]);
+            } catch (Exception e) {
+                return 0;
+            }
+        }
     }
 
     /** 用 tag 隔离各通道的请求，便于取消。 */
@@ -280,19 +353,34 @@ public class Updater implements Download.Callback, UpdateListener {
         }
     }
 
+    /**
+     * 期望的 SHA-256。
+     *
+     * <p>与 XPplay 一致：从 Release 的 {@code SHA256SUMS.txt} 资产读取，
+     * 而不是把哈希塞进清单描述里——清单是结构化数据，哈希属于独立的校验文件。</p>
+     */
     private String expectedSha256() {
+        String url = checksumsUrl;
+        if (url == null || url.isEmpty()) return null;
         try {
-            JSONObject object = fetchManifest();
-            if (object == null) return null;
-            String desc = object.optString("desc");
-            int idx = desc.indexOf("SHA-256:");
-            if (idx < 0) return null;
-            String value = desc.substring(idx + 8).trim();
-            int end = value.indexOf(' ');
-            return end > 0 ? value.substring(0, end) : value;
-        } catch (Exception e) {
-            return null;
+            String body = null;
+            for (String u : Github.downloadUrls(url)) {
+                try {
+                    String s = OkHttp.newCall(u, "sha").execute().body().string();
+                    if (s != null && !s.trim().isEmpty()) { body = s; break; }
+                } catch (Exception ignored) {
+                }
+            }
+            if (body == null) return null;
+            for (String line : body.split("\\n")) {
+                String t = line.trim();
+                if (t.isEmpty()) continue;
+                int sp = t.indexOf(' ');
+                if (sp > 0) return t.substring(0, sp).trim();
+            }
+        } catch (Exception ignored) {
         }
+        return null;
     }
 
     private static String sha256(File file) throws Exception {
