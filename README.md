@@ -55,14 +55,17 @@ JKTV 的更新检查按以下顺序尝试，某一档失效会自动切换下一
 | 3 | `ghproxy.net` | ✅ 1.31s |
 | 4 | GitHub raw 直链 | ❌ 不通（VPN / 海外网络下可用） |
 
-**下载 APK**（读 `github.com/.../releases/download`）：
+**下载 APK**（读 `github.com/.../releases/download`，实测对象为 39MB APK）：
 
 | 顺序 | 通道 | 中国移动实测 |
 |---|---|---|
-| 1 | `ghproxy.cn` | ✅ 0.92s |
-| 2 | `ghproxy.net` | ✅ 185 KB/s |
-| — | `gh-proxy.com` | ❌ **不支持 Releases 资产（返回 404）**，已从下载列表移除 |
+| 1 | `ghproxy.net` | ✅ **唯一可靠**：完整下载 39MB/71s，SHA-256 与清单一致 |
+| — | `ghproxy.cn` | ❌ 大文件返回 672 验证 HTML 页（小 Range 请求正常，诱骗性强） |
+| — | `gh-proxy.com` | ❌ 400s 仅下到 10MB 即断 |
 
+> **两层防护**：① 下载后先校验 APK 的 ZIP 魔数与中央目录，非 APK 直接判失败；
+> ② 再比对 SHA-256。任一层不通过都会删除文件并中止安装，不会把验证页装上设备。
+>
 > 已按实测移除 `cdn.jsdelivr.net`（DNS 解析失败）与 `ghfast.top`（连接挂住不返回）。
 
 **两种触发方式**

@@ -201,6 +201,13 @@ public class Updater implements Download.Callback, UpdateListener {
 
     @Override
     public void success(File file) {
+        // 先验证是否为合法 APK（ZIP 魔数），防止镜像返回 HTML 验证页被当作下载成功
+        if (!isValidApk(file)) {
+            Path.clear(file);
+            Notify.show(ResUtil.getString(R.string.update_checksum_fail));
+            dismiss();
+            return;
+        }
         if (verify(file)) {
             FileUtil.openFile(file);
         } else {
@@ -208,6 +215,29 @@ public class Updater implements Download.Callback, UpdateListener {
             Notify.show(ResUtil.getString(R.string.update_checksum_fail));
         }
         dismiss();
+    }
+
+    /** APK 必然是 ZIP：检查 PK\x03\x04 魔数与中央目录结尾。 */
+    private boolean isValidApk(File file) {
+        if (file == null || !file.exists() || file.length() < 1024) return false;
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(file, "r")) {
+            byte[] head = new byte[4];
+            raf.readFully(head);
+            if (head[0] != 'P' || head[1] != 'K') return false;
+            if (head[2] != 3 && head[2] != 5 && head[2] != 7) return false;
+            // 中央目录记录签名 PK\x01\x02 应存在于文件末尾附近
+            long len = raf.length();
+            long scan = Math.min(len, 1024 * 1024);
+            raf.seek(len - scan);
+            byte[] tail = new byte[(int) scan];
+            raf.readFully(tail);
+            for (int i = tail.length - 4; i >= 0; i--) {
+                if (tail[i] == 'P' && tail[i + 1] == 'K' && tail[i + 2] == 1 && tail[i + 3] == 2) return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

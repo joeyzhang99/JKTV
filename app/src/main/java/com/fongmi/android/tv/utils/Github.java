@@ -44,14 +44,16 @@ public class Github {
     /**
      * 下载 APK 用的加速前缀。
      *
-     * <p>与 {@link #PREFIXES} 分开维护：各镜像对 GitHub Releases 资产的支持不一致
-     * （gh-proxy.com 对 releases/download 返回 404）。</p>
+     * <p>与 {@link #PREFIXES} 分开维护，因为实测各镜像在大文件下载上差异极大：</p>
+     * <ul>
+     *   <li><b>ghproxy.net</b> —— ✅ 唯一可靠：完整下载 39MB/71s，SHA-256 与清单一致</li>
+     *   <li>ghproxy.cn    —— ❌ 大文件返回 672 安全验证 HTML 页（Range 小请求正常，诱骗性强）</li>
+     *   <li>gh-proxy.com  —— ❌ 39MB 下载 400s 未完成（仅下到 10MB 即断）</li>
+     * </ul>
      *
-     * <p>2026-10-18 中国移动实测（releases/download）：ghproxy.cn ✅ / ghproxy.net ✅ /
-     * gh-proxy.com ❌ 404。</p>
+     * <p>2026-10-18 中国移动实测（releases/download，39MB APK）。</p>
      */
     public static final List<String> DOWNLOAD_PREFIXES = List.of(
-            "https://ghproxy.cn/",
             "https://ghproxy.net/"
     );
 
