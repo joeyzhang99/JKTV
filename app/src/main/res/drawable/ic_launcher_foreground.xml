@@ -3,7 +3,13 @@
     android:height="108dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-    <!-- JKTV 电镀金属字（用户确认稿 c2：字号110/居中/四周留白约98px）
+    <group
+        android:scaleX="0.62"
+        android:scaleY="0.62"
+        android:translateX="97.3"
+        android:translateY="97.3">
+    <!-- JKTV 电镀金属字（确认稿 c2，整体缩进 66% 安全区：×0.62 居中，
+         否则 launcher 遮罩会裁掉左右字母——电视实拍已复现） -->
          字形以粗几何笔画构造（Arial Black 风格的简化路径），
          上层白→银渐变模拟电镀高光，下层深银做厚度，1px 亮边描边。 -->
     <!-- 背光晕（蓝，径向近似：多层同心椭圆透明度递减） -->
@@ -31,4 +37,6 @@
 
     <!-- 分隔线 -->
     <path android:fillColor="#1E88E5" android:pathData="M166,334 h180 v4 h-180 z"/>
+    </group>
+
 </vector>
