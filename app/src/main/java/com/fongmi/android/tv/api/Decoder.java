@@ -46,7 +46,53 @@ public class Decoder {
         if (data.contains("./")) data = data.replace("./", UrlUtil.resolve(url, "./"));
         if (data.contains("__JS1__")) data = data.replace("__JS1__", "./");
         if (data.contains("__JS2__")) data = data.replace("__JS2__", "../");
+        // JKTV: 部分站点返回以 "/" 开头的绝对路径（如 "/api/xxx"），
+        // 若不补全 scheme+host，OkHttp 会抛
+        // "Expected URL scheme 'http' or 'https' but no scheme was found"
+        data = fixRootRelative(url, data);
         return data;
+    }
+
+    /**
+     * 把 JSON 字符串里以 "/" 开头的相对路径补全为完整 URL。
+     *
+     * <p>只处理形如 {@code "https://..."} 或 {@code "/path"} 的取值：凡出现在引号内、
+     * 以 / 开头且不含 "://" 的片段，都用 baseUri 的 origin 补齐。</p>
+     */
+    private static String fixRootRelative(String url, String data) {
+        if (url == null || url.isEmpty()) return data;
+        String origin = originOf(url);
+        if (origin.isEmpty()) return data;
+        Matcher m = Pattern.compile("\"(/[^\"\\s]*)\"").matcher(data);
+        StringBuilder sb = new StringBuilder();
+        int last = 0;
+        while (m.find()) {
+            String p = m.group(1);
+            // 跳过协议相对 "//" 与已是完整地址的情况
+            if (p.startsWith("//") || p.contains("://")) continue;
+            sb.append(data, last, m.start(1)).append(origin).append(p);
+            last = m.end(1);
+        }
+        if (last == 0) return data;
+        sb.append(data.substring(last));
+        return sb.toString();
+    }
+
+    /** 取 scheme://host[:port]，失败返回空串。 */
+    private static String originOf(String url) {
+        try {
+            int i = url.indexOf("://");
+            if (i < 0) return "";
+            int start = i + 3;
+            int end = url.length();
+            for (int k = start; k < url.length(); k++) {
+                char c = url.charAt(k);
+                if (c == '/' || c == '?' || c == '#') { end = k; break; }
+            }
+            return url.substring(0, end);
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private static String replace(String url, String data, String ext) {

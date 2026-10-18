@@ -9,6 +9,7 @@ annotation = "1.10.0"
 appcompat = "1.7.1"
 biometric = "1.1.0"
 desugar = "2.1.5"
+checkerframework = "3.42.0"
 leanback = "1.2.0"
 lifecycleService = "2.10.0"
 media = "1.8.0"
@@ -119,6 +120,7 @@ media3-database = { group = "androidx.media3", name = "media3-database", version
 media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
 media3-exoplayer-dash = { group = "androidx.media3", name = "media3-exoplayer-dash", version.ref = "media3" }
 media3-exoplayer-rtsp = { group = "androidx.media3", name = "media3-exoplayer-rtsp", version.ref = "media3" }
+checker-qual = { group = "org.checkerframework", name = "checker-qual", version.ref = "checkerframework" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

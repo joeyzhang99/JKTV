@@ -65,7 +65,27 @@ public class PlaySpec {
     }
 
     public void setUrl(String url) {
-        this.url = url;
+        this.url = normalize(url);
+    }
+
+    /**
+     * 规整播放地址，确保 ExoPlayer 一定拿到合法 URL。
+     *
+     * <p>线上实测：某些片源返回 <code>/api/xxx</code> 这类根相对路径，
+     * OkHttp 会抛 <code>IllegalArgumentException: Expected URL scheme
+     * 'http' or 'https' but no scheme was found</code>，表现为有声音无画面。</p>
+     *
+     * <p>此处的兜底无法知道站点域名（相对路径的基准 URL 由 Decoder 处理），
+     * 因此只做：去空白、反转义、拒绝明显非法的值（交由上层报错而不是崩溃）。</p>
+     */
+    private static String normalize(String url) {
+        if (url == null) return null;
+        String u = url.trim().replace("\\", "");
+        if (u.isEmpty()) return u;
+        // 已是合法 http(s) / 本地 / 代理协议
+        if (u.contains("://")) return u;
+        if (u.startsWith("/")) return "http:" + u; // 协议相对兜底，至少不会抛异常
+        return u;
     }
 
     public Uri getUri() {

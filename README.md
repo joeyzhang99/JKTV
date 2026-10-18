@@ -4,7 +4,7 @@
 
 > **JKTV 本身不内置、不提供任何内容来源。** 所有片源需用户自行配置。
 
-[![version](https://img.shields.io/badge/version-JKTV--V1.1.0-c0392b)]()
+[![version](https://img.shields.io/badge/version-JKTV--V1.2.0-c0392b)]()
 [![license](https://img.shields.io/badge/license-GPL--3.0-blue)]()
 [![platform](https://img.shields.io/badge/Android-7.0%2B%20%7C%20minSdk%2024-3ddc84)]()
 
@@ -26,7 +26,7 @@ JKTV 是一个**播放器外壳**：它不含任何影视内容，只提供
 | 内核 | 用途 | 说明 |
 |---|---|---|
 | **ExoPlayer (Media3 1.11.1)** | 硬解主引擎 | H.264/HEVC/AV1、HDR10+、DRM |
-| **FFmpeg (libffmpeg.so)** | 软解兜底 | 完整 FFmpeg，硬解失败时回退 |
+| **FFmpeg 软解**（官方 decoder_ffmpeg，Apache-2.0） | 软解兜底 | 硬解不支持该格式时自动回退，解决"有声音无画面" |
 | ASS/SSA | 字幕 | Media3 内置解析，支持底部位置与字号调节 |
 
 > **V1.0.0 功能边界**：不含 MPV 内核 / 弹幕渲染 / libass 高级字幕 / 多版本选择。
@@ -84,8 +84,8 @@ JKTV 的更新检查按以下顺序尝试，某一档失效会自动切换下一
 
 | 设备 | 文件 |
 |---|---|
-| 电视 / 盒子（**32 位 armv7**，如 TCL 55Q9K） | `JKTV-V1.1.0-leanback-armeabi-v7a.apk` |
-| 电视 / 盒子（**64 位 V8 / arm64-v8a**） | `JKTV-V1.1.0-leanback-arm64-v8a.apk` |
+| 电视 / 盒子（**32 位 armv7**，如 TCL 55Q9K） | `JKTV-V1.2.0-leanback-armeabi-v7a.apk`（含 FFmpeg）|
+| 电视 / 盒子（**64 位 V8 / arm64-v8a**） | `JKTV-V1.1.1-leanback-arm64-v8a.apk`（纯硬解，无 FFmpeg）|
 
 > 注意：不同签名的 APK 不能覆盖安装。切换来源前请先卸载。
 

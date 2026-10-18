@@ -12,6 +12,7 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
+import androidx.media3.decoder.ffmpeg.FfmpegLibrary;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
@@ -114,15 +115,24 @@ public class ExoUtil {
     }
 
     /**
-     * JKTV: 上游 5.5.x 使用 nextlib 的 NextRenderersFactory（FFmpeg 软解扩展）。
-     * 该库未随源码分发，此处改用 Media3 官方 DefaultRenderersFactory：
-     * 硬解走 MediaCodec，软解由 libffmpeg.so（JNI）承担，功能对等，
-     * 仅少了 nextlib 的“优先软/硬解”细粒度开关。
+     * 构造渲染器工厂：硬解(MediaCodec) + FFmpeg 软解兜底。
+     *
+     * <p>JKTV 集成 Media3 官方 {@code decoder_ffmpeg} 模块（Apache-2.0）作为软解内核：
+     * 硬解失败（部分 HEVC/AV1 片源、设备解码器缺失）时自动回退到 FFmpeg 软解，
+     * 避免"有声音无画面"。FFmpeg 库不可用时自动降级为纯硬解。</p>
      */
     private static RenderersFactory buildRenderersFactory(int renderMode) {
         DefaultRenderersFactory factory = new DefaultRenderersFactory(App.get())
                 .setEnableDecoderFallback(true)
                 .setExtensionRendererMode(renderMode);
+        // JKTV: 集成 Media3 官方 decoder_ffmpeg 模块（Apache-2.0）作软解内核。
+        // 按官方 README，给 DefaultRenderersFactory 设 EXTENSION_RENDERER_MODE_ON
+        // 即可自动启用 FFmpeg 扩展渲染器：硬解不支持该格式时回退软解，
+        // 解决"有声音无画面"。FFmpeg 库缺失时自动降级为纯硬解。
+        if (FfmpegLibrary.isAvailable()) {
+            factory.setExtensionRendererMode(
+                    DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON);
+        }
         return factory;
     }
 
