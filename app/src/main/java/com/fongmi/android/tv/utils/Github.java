@@ -21,12 +21,13 @@ import java.util.List;
  *
  * <h3>通道顺序（2026-10-18 中国移动、关闭 VPN 实测）</h3>
  * <ul>
- *   <li>{@code api.github.com} —— 国内不通</li>
- *   <li>{@code ghproxy.net} —— 0.5–1.3 秒，稳定</li>
- *   <li>{@code gh-proxy.com} —— 0.6 秒，波动</li>
- *   <li>{@code cdn.jsdelivr.net} —— DNS 不通（此前实测）</li>
+ *   <li>{@code api.github.com} —— 国内不通；但<b>经镜像代理时是实时的</b>，故作首选</li>
+ *   <li>{@code gh-proxy.com} —— 代理 API 可用；下载 7.2s/MB，明显快于 ghproxy.net</li>
+ *   <li>{@code ghproxy.net} —— 代理 API 可用；下载 24.3s/MB</li>
+ *   <li>{@code cdn.jsdelivr.net} —— DNS 在本机不通；电视可解析，保留兜底</li>
  * </ul>
- * 失效的通道已移除：留着只会让用户白等一次超时。
+ * 已移除的通道：{@code ghfast.top}（连接挂住不返回）、{@code ghproxy.cn}
+ * （返回 200 但内容是安全验证 HTML 页）。
  */
 public class Github {
 
@@ -49,10 +50,10 @@ public class Github {
     private static final String RELEASES_BASE =
             "https://github.com/" + REPO + "/releases/download";
 
-    /** 加速前缀，按尝试顺序。 */
+    /** 加速前缀，按尝试顺序（gh-proxy.com 实测更快，置前）。 */
     public static final List<String> PREFIXES = List.of(
-            "https://ghproxy.net/",
-            "https://gh-proxy.com/"
+            "https://gh-proxy.com/",
+            "https://ghproxy.net/"
     );
 
     /**
@@ -60,12 +61,21 @@ public class Github {
      *
      * <p>顺序与 XPplay 完全一致：GitHub API → 加速前缀代理的 raw → jsDelivr 兜底。</p>
      */
+    /**
+     * 检查更新时依次尝试的地址。
+     *
+     * <h3>为什么以 API 为主、raw 为辅</h3>
+     * <p>2026-10-18 实测发现：国内加速镜像对 {@code raw.githubusercontent.com} 有
+     * <b>长达数小时的缓存</b>（GitHub 源头已是 v1.2.4，两个镜像仍返回 v1.2.3），
+     * 而代理 {@code api.github.com} 时返回的是<b>实时</b>结果。
+     * 因此通道以 API 为主，raw 仅作兜底——它虽然新鲜度不可靠，但胜在路径短。</p>
+     */
     public static List<String> catalogUrls() {
         List<String> urls = new ArrayList<>();
-        urls.add(RELEASES_API);
-        urls.add(PREFIXES.get(0) + RAW_CATALOG);
-        urls.add(PREFIXES.get(1) + RAW_CATALOG);
-        urls.add(FALLBACK_CATALOG);
+        urls.add(RELEASES_API);                       // 直连（VPN / 海外网络）
+        for (String p : PREFIXES) urls.add(p + RELEASES_API);   // 代理 API：实测为实时
+        for (String p : PREFIXES) urls.add(p + RAW_CATALOG);    // 代理 raw：可能命中长缓存
+        urls.add(FALLBACK_CATALOG);                            // jsDelivr（12h 缓存，最后兜底）
         return urls;
     }
 
