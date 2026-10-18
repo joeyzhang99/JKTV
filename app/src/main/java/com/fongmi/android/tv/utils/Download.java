@@ -25,7 +25,7 @@ import okhttp3.Response;
 public class Download {
 
     private final File file;
-    private final List<String> urls;
+    private List<String> urls;
     private Callback callback;
     private Future<?> future;
 
@@ -43,6 +43,12 @@ public class Download {
     public Download(List<String> urls, File file) {
         this.urls = urls;
         this.file = file;
+    }
+
+    /** 切换下载地址（更新时依据清单里的 tag 重建）。 */
+    public Download reset(List<String> urls) {
+        this.urls = urls;
+        return this;
     }
 
     /** 设置取消标签（与上游 API 兼容）。 */

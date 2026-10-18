@@ -67,14 +67,21 @@ public class Github {
         return rawUrl(fileName);
     }
 
-    /** APK 单通道地址（GitHub Releases 直链）。 */
-    public static String getApk(String apkName) {
-        return RELEASES_BASE + "/" + releaseTag() + "/" + apkName + ".apk";
+    /**
+     * 构造 APK 下载地址。
+     *
+     * <p><b>不要硬编码 tag</b>：曾经因硬编码导致「检查更新读到新版本、下载却指向旧 tag」
+     * 而静默 404。现在优先用清单里的 {@code url} 字段（发布时由脚本生成，
+     * 必然与实际 Release 一致），缺失时才回退到按约定拼接。</p>
+     */
+    public static String getApk(String apkName, String tag) {
+        String t = (tag == null || tag.isEmpty()) ? releaseTag() : tag;
+        return RELEASES_BASE + "/" + t + "/" + apkName + ".apk";
     }
 
-    /** 当前发布 tag，与 version.json 保持一致。 */
+    /** 兜底 tag。仅在清单未提供 url 时使用。 */
     public static String releaseTag() {
-        return "v1.1.1";
+        return "v1.2.0";
     }
 
     /**
@@ -92,9 +99,12 @@ public class Github {
     /**
      * 同一个 APK 下载地址的全部可用镜像，原始地址排第一。
      * 下载失败时由调用方依次重试。
+     *
+     * @param apkName 形如 leanback-armeabi_v7a
+     * @param tag     清单里的 tag（如 v1.2.0），可为空
      */
-    public static List<String> downloadUrls(String apkName) {
-        String raw = getApk(apkName);
+    public static List<String> downloadUrls(String apkName, String tag) {
+        String raw = getApk(apkName, tag);
         List<String> urls = new ArrayList<>();
         urls.add(raw);
         for (String prefix : DOWNLOAD_PREFIXES) urls.add(prefix + raw);

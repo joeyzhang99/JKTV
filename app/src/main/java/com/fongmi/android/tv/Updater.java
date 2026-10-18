@@ -49,11 +49,30 @@ public class Updater implements Download.Callback, UpdateListener {
     private final Download download;
     private UpdateDialog dialog;
 
+    /** 清单里的 Release tag，用于拼出正确的下载路径。 */
+    private String tag;
+
     /** 本次检查/下载实际使用的通道，用于给用户展示。 */
     private String channel = "GitHub";
 
     private Updater() {
-        this.download = Download.create(Github.downloadUrls(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi), getFile());
+        this.download = Download.create(
+                Github.downloadUrls(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi, null),
+                getFile());
+    }
+
+    /**
+     * 依据清单里的 tag 重设下载地址。
+     *
+     * <p>JKTV 修复：原先下载地址里的 tag 是硬编码的，导致「检查更新显示新版本，
+     * 点更新却去旧 tag 下文件」而静默 404。现在从清单取值，保证与实际 Release 一致。</p>
+     */
+    private void applyTag(String tag) {
+        if (tag == null || tag.isEmpty()) return;
+        if (tag.equals(this.tag)) return;
+        this.tag = tag;
+        this.download.reset(Github.downloadUrls(
+                BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi, tag));
     }
 
     public static Updater create() {
@@ -62,11 +81,6 @@ public class Updater implements Download.Callback, UpdateListener {
 
     private File getFile() {
         return Path.cache("update.apk");
-    }
-
-    /** APK 单通道地址（GitHub 直链），保留给需要单地址的调用方。 */
-    private String getApk() {
-        return Github.getApk(BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi);
     }
 
     /**
@@ -147,6 +161,8 @@ public class Updater implements Download.Callback, UpdateListener {
                 JSONObject object = new JSONObject(trimmed);
                 if (object.has("code") && object.has("name")) {
                     this.channel = Github.channelLabel(url);
+                    // JKTV: 清单里的 tag 即为 APK 所在 Release，据此修正下载地址
+                    applyTag(object.optString("tag"));
                     return object;
                 }
             } catch (Exception ignored) {
