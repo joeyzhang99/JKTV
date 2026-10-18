@@ -245,6 +245,29 @@ public class Updater implements Download.Callback, UpdateListener {
                 return null;
             }
             JSONObject o = new JSONObject(body);
+            // GitHub API（/releases/latest）返回的是对象：含 tag_name 与 assets。
+            // 旧实现把该响应当扁平格式解析，读出 code=0、asset=API 自身的 url 字段，
+            // 导致 versionCode 比较恒为 0 <= 当前版本 → 永远提示「已是最新版本」。
+            if (o.has("tag_name") && o.has("assets")) {
+                m.tag = o.optString("tag_name");
+                m.name = o.optString("name");
+                org.json.JSONArray assets = o.optJSONArray("assets");
+                if (assets != null) {
+                    for (int j = 0; j < assets.length(); j++) {
+                        JSONObject a = assets.optJSONObject(j);
+                        if (a == null) continue;
+                        String n = a.optString("name");
+                        if (n.endsWith(".apk") && m.assetUrl.isEmpty()) {
+                            m.assetUrl = a.optString("browser_download_url");
+                            m.code = versionCodeOf(m.tag, n);
+                        } else if ("SHA256SUMS.txt".equalsIgnoreCase(n)) {
+                            m.sumsUrl = a.optString("browser_download_url");
+                        }
+                    }
+                }
+                return m.assetUrl.isEmpty() ? null : m;
+            }
+            // JKTV 扁平格式 {name, code, tag, url, sha_url}
             m.name = o.optString("name");
             m.code = o.optInt("code");
             m.tag = o.optString("tag");

@@ -1,1 +1,1 @@
-b6e09849ca7b200f19502032fb82efcc11c7c988ad0e615caf3c2adc20b45f14  JKTV-V1.2.9-leanback-armeabi-v7a.apk
+3ab3aaa008bd9d991fc01518552e9f80a5af605c88bc54492955e1e366e2e792  JKTV-V1.2.10-leanback-armeabi-v7a.apk
