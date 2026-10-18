@@ -52,6 +52,9 @@ public class Updater implements Download.Callback, UpdateListener {
     /** 清单里的 Release tag，用于拼出正确的下载路径。 */
     private String tag;
 
+    /** 清单里的完整 APK 地址（发布时生成，必然与 Release 资产一致）。 */
+    private String url;
+
     /** 本次检查/下载实际使用的通道，用于给用户展示。 */
     private String channel = "GitHub";
 
@@ -67,11 +70,12 @@ public class Updater implements Download.Callback, UpdateListener {
      * <p>JKTV 修复：原先下载地址里的 tag 是硬编码的，导致「检查更新显示新版本，
      * 点更新却去旧 tag 下文件」而静默 404。现在从清单取值，保证与实际 Release 一致。</p>
      */
-    private void applyTag(String tag) {
-        if (tag == null || tag.isEmpty()) return;
-        if (tag.equals(this.tag)) return;
+    private void applyTag(String tag, String url) {
+        if ((tag == null || tag.isEmpty()) && (url == null || url.isEmpty())) return;
+        if (tag != null && tag.equals(this.tag) && url != null && url.equals(this.url)) return;
         this.tag = tag;
-        this.download.reset(Github.downloadUrls(
+        this.url = url;
+        this.download.reset(Github.downloadUrlsFromManifest(url,
                 BuildConfig.FLAVOR_mode + "-" + BuildConfig.FLAVOR_abi, tag));
     }
 
@@ -162,7 +166,7 @@ public class Updater implements Download.Callback, UpdateListener {
                 if (object.has("code") && object.has("name")) {
                     this.channel = Github.channelLabel(url);
                     // JKTV: 清单里的 tag 即为 APK 所在 Release，据此修正下载地址
-                    applyTag(object.optString("tag"));
+                    applyTag(object.optString("tag"), object.optString("url"));
                     return object;
                 }
             } catch (Exception ignored) {
@@ -211,7 +215,10 @@ public class Updater implements Download.Callback, UpdateListener {
 
     @Override
     public void error(String msg) {
-        Notify.show(msg);
+        // JKTV: 把真实的失败原因透出（HTTP 状态码 / 超时 / 网络），
+        // 避免只显示 "HTTP 404" 这类无信息量文案而无法定位。
+        String detail = (msg == null || msg.trim().isEmpty()) ? "unknown" : msg.trim();
+        Notify.show(ResUtil.getString(R.string.update_fail_reason, detail));
         dismiss();
     }
 

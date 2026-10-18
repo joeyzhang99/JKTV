@@ -1,8 +1,7 @@
 {
-  "name": "JKTV-V1.2.1",
-  "code": 10201,
-  "tag": "v1.2.1",
-  "url": "https://github.com/joeyzhang99/JKTV/releases/download/v1.2.1/JKTV-V1.2.1-leanback-armeabi-v7a.apk",
-  "desc": "JKTV JKTV-V1.2.1\n\nSHA-256: 96d93ced70cd555ca90d2ea675159789e1f87683086009af88e8a790e47c70d9",
-  "note": "下载约需 20 分钟（镜像限速），支持断点续传，中断后再次点击更新可继续"
+  "name": "JKTV-V1.2.3",
+  "code": 10203,
+  "tag": "v1.2.3",
+  "url": "https://github.com/joeyzhang99/JKTV/releases/download/v1.2.3/JKTV-V1.2.3-leanback-armeabi-v7a.apk",
+  "desc": "JKTV JKTV-V1.2.3\n\nSHA-256: bd3c858eb5f0497334e03bb3f7a6bbc5793d6bc3751687c6873e6b1fbf765563"
 }

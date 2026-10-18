@@ -97,14 +97,35 @@ public class Github {
     }
 
     /**
-     * 同一个 APK 下载地址的全部可用镜像，原始地址排第一。
-     * 下载失败时由调用方依次重试。
+ * 由 Release 资产名反推下载 URL。
+ *
+ * <p><b>JKTV 修复</b>：原实现把文件名拼成 {@code leanback-armeabi_v7a.apk}，
+ * 而 Release 里的实际资产名是 {@code JKTV-V1.2.2-leanback-armeabi-v7a.apk}
+ * （带版本号前缀），导致 404。这里由 tag 推出完整文件名。</p>
+ */
+public static List<String> downloadUrls(String flavorAbi, String tag) {
+        String t = (tag == null || tag.isEmpty()) ? releaseTag() : tag;
+        // 资产名规则：JKTV-{tag去掉v}-{flavorAbi}.apk
+        String version = t.startsWith("v") ? t.substring(1) : t;
+        String asset = "JKTV-" + version + "-" + flavorAbi + ".apk";
+        String raw = RELEASES_BASE + "/" + t + "/" + asset;
+        List<String> urls = new ArrayList<>();
+        urls.add(raw);
+        for (String prefix : DOWNLOAD_PREFIXES) urls.add(prefix + raw);
+        return urls;
+    }
+
+    /**
+     * 由清单里的完整 URL 构造多通道下载地址。
      *
-     * @param apkName 形如 leanback-armeabi_v7a
-     * @param tag     清单里的 tag（如 v1.2.0），可为空
+     * <p>优先使用发布时写入清单的 {@code url}：它由发版脚本生成，必然与实际
+     * Release 资产一致，从根本上避免"代码拼的名字与资产名不一致"导致 404。</p>
      */
-    public static List<String> downloadUrls(String apkName, String tag) {
-        String raw = getApk(apkName, tag);
+    public static List<String> downloadUrlsFromManifest(String url, String flavorAbi, String tag) {
+        if (url == null || url.trim().isEmpty()) return downloadUrls(flavorAbi, tag);
+        String raw = url.trim();
+        // 只接受可信来源，避免清单被篡改指向任意地址
+        if (!raw.startsWith(RELEASES_BASE)) return downloadUrls(flavorAbi, tag);
         List<String> urls = new ArrayList<>();
         urls.add(raw);
         for (String prefix : DOWNLOAD_PREFIXES) urls.add(prefix + raw);
