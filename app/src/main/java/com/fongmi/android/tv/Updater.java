@@ -162,7 +162,7 @@ public class Updater implements Download.Callback, UpdateListener {
      * @return 解析成功的清单；全部通道失败时返回 null
      */
     private Manifest fetchManifest() {
-        List<String> urls = Github.catalogUrls();
+        List<String> urls = Github.catalogUrls(Setting.getUpdateChannel());
         for (int i = 0; i < urls.size(); i++) {
             String url = urls.get(i);
             for (int attempt = 0; attempt < 2; attempt++) {

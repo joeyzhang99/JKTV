@@ -27,6 +27,7 @@ import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.base.BaseActivity;
+import com.fongmi.android.tv.ui.dialog.ChannelDialog;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
 import com.fongmi.android.tv.ui.dialog.DohDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
@@ -34,6 +35,7 @@ import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.RestoreDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.utils.FileUtil;
+import com.fongmi.android.tv.utils.Github;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -91,6 +93,12 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[PlayerSetting.getSize()]);
     }
 
+    /** 当前更新通道显示名（跟随系统 / 具体通道名）。 */
+    private String getUpdateChannelName() {
+        int c = Setting.getUpdateChannel();
+        return c == Github.CH_AUTO ? getString(R.string.update_channel_auto) : Github.CHANNEL_NAMES.get(c);
+    }
+
     private void setCacheText() {
         FileUtil.getCacheSize(new Callback() {
             @Override
@@ -113,6 +121,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         mBinding.danmaku.setOnClickListener(this::onDanmaku);
         mBinding.restore.setOnClickListener(this::onRestore);
         mBinding.version.setOnClickListener(this::onVersion);
+        mBinding.version.setOnLongClickListener(this::onChannel);
         mBinding.vod.setOnLongClickListener(this::onVodEdit);
         mBinding.vodHome.setOnClickListener(this::onVodHome);
         mBinding.live.setOnLongClickListener(this::onLiveEdit);
@@ -235,6 +244,18 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     private void onVersion(View view) {
         // 手动检查更新：无视"自动检查"开关，并在无新版本时明确提示
         Updater.create().force().start(this, true);
+    }
+
+    /** 长按「版本」：选择更新通道。 */
+    private boolean onChannel(View view) {
+        ChannelDialog.show(this);
+        return true;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mBinding.versionText.setText(BuildConfig.VERSION_NAME);
     }
 
     private void setWallDefault(View view) {

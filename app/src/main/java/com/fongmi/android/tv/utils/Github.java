@@ -56,6 +56,71 @@ public class Github {
             "https://ghproxy.net/"
     );
 
+    /** 通道索引：跟随系统（按内置顺序自动尝试）。 */
+    public static final int CH_AUTO = -1;
+    /** 通道索引：GitHub API 直连。 */
+    public static final int CH_API = 0;
+    /** 通道索引：gh-proxy.com 代理 API。 */
+    public static final int CH_GH_PROXY_COM = 1;
+    /** 通道索引：ghproxy.net 代理 API。 */
+    public static final int CH_GHPROXY_NET = 2;
+    /** 通道索引：gh-proxy.com 代理 raw。 */
+    public static final int CH_GH_PROXY_COM_RAW = 3;
+    /** 通道索引：ghproxy.net 代理 raw。 */
+    public static final int CH_GHPROXY_NET_RAW = 4;
+    /** 通道索引：jsDelivr。 */
+    public static final int CH_JSD_ELIVR = 5;
+    /** 通道索引：GitHub raw 直连（VPN/海外）。 */
+    public static final int CH_RAW_DIRECT = 6;
+
+    /** 通道显示名（与上面索引一一对应，UI 选择用）。 */
+    public static final List<String> CHANNEL_NAMES = List.of(
+            "GitHub API（直连）",
+            "gh-proxy.com（API）",
+            "ghproxy.net（API）",
+            "gh-proxy.com（清单）",
+            "ghproxy.net（清单）",
+            "jsDelivr（CDN）",
+            "GitHub raw（直连）"
+    );
+
+    /** 全部已知通道对应的清单 URL，索引与 CHANNEL_NAMES 一致。 */
+    public static List<String> allChannelUrls() {
+        List<String> urls = new ArrayList<>();
+        urls.add(RELEASES_API);                                   // 0
+        urls.add(PREFIXES.get(0) + RELEASES_API);                 // 1
+        urls.add(PREFIXES.get(1) + RELEASES_API);                 // 2
+        urls.add(PREFIXES.get(0) + RAW_CATALOG);                  // 3
+        urls.add(PREFIXES.get(1) + RAW_CATALOG);                  // 4
+        urls.add(FALLBACK_CATALOG);                               // 5
+        urls.add(RAW_CATALOG);                                    // 6
+        return urls;
+    }
+
+    /**
+     * 检查更新用地址序列。
+     *
+     * @param channel 用户选择的通道索引；CH_AUTO 表示跟随系统内置顺序
+     */
+    public static List<String> catalogUrls(int channel) {
+        List<String> all = allChannelUrls();
+        List<String> urls = new ArrayList<>();
+        if (channel >= 0 && channel < all.size()) {
+            // 用户指定通道优先，其后按内置顺序兜底（该通道失效时自动回退）
+            urls.add(all.get(channel));
+            for (String u : all) if (!urls.contains(u)) urls.add(u);
+        } else {
+            // 内置顺序：API 直连 → 代理 API ×2 → 代理 raw ×2 → jsDelivr
+            urls.add(all.get(0));
+            urls.add(all.get(1));
+            urls.add(all.get(2));
+            urls.add(all.get(3));
+            urls.add(all.get(4));
+            urls.add(all.get(5));
+        }
+        return urls;
+    }
+
     /**
      * 检查更新时依次尝试的地址。
      *
@@ -71,12 +136,7 @@ public class Github {
      * 因此通道以 API 为主，raw 仅作兜底——它虽然新鲜度不可靠，但胜在路径短。</p>
      */
     public static List<String> catalogUrls() {
-        List<String> urls = new ArrayList<>();
-        urls.add(RELEASES_API);                       // 直连（VPN / 海外网络）
-        for (String p : PREFIXES) urls.add(p + RELEASES_API);   // 代理 API：实测为实时
-        for (String p : PREFIXES) urls.add(p + RAW_CATALOG);    // 代理 raw：可能命中长缓存
-        urls.add(FALLBACK_CATALOG);                            // jsDelivr（12h 缓存，最后兜底）
-        return urls;
+        return catalogUrls(CH_AUTO);
     }
 
     /**

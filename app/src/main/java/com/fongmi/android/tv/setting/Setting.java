@@ -34,6 +34,15 @@ public class Setting {
         Prefers.put("hot", hot);
     }
 
+    /** 更新通道选择：-1 跟随系统，0-6 为具体通道（见 Github.CH_*）。 */
+    public static int getUpdateChannel() {
+        return Prefers.getInt("update_channel", -1);
+    }
+
+    public static void putUpdateChannel(int channel) {
+        Prefers.put("update_channel", channel);
+    }
+
     public static String getUa() {
         return Prefers.getString("ua");
     }
