@@ -154,23 +154,45 @@ public class Updater implements Download.Callback, UpdateListener {
      * <p><b>关键</b>：必须以"能否解析出合法 JSON 且含 code/name 字段"判定成功，
      * 而不能只看 HTTP 状态码——ghproxy.cn 会返回 200 但内容是安全验证 HTML 页。</p>
      *
+     * <p><b>限流容错</b>（JKTV 实测）：镜像会返回 HTTP 429（Too Many Requests）或
+     * 偶发连接失败。旧实现遇到失败只静默换下一个通道，若排在第一的通道正好被限流，
+     * 就可能连续失败而看不到新版本。现在改为：记录失败原因，遇到 429 立即跳到
+     * 下一通道，并对同一通道做一次短暂退避重试。</p>
+     *
      * @return 解析成功的清单；全部通道失败时返回 null
      */
     private Manifest fetchManifest() {
-        for (String url : Github.catalogUrls()) {
-            try {
-                String body = OkHttp.newCall(url, channelTag(url)).execute().body().string();
-                if (body == null || body.isEmpty()) continue;
-                String trimmed = body.trim();
-                // 镜像可能返回 HTML 验证页：必须以 { 或 [ 开头才是 JSON
-                if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) continue;
-                Manifest m = Manifest.parse(trimmed);
-                if (m == null) continue;
-                this.channel = Github.channelLabel(url);
-                applyAsset(m.tag, m.assetUrl, m.sumsUrl);
-                return m;
-            } catch (Exception ignored) {
-                // 该通道失败，尝试下一个
+        List<String> urls = Github.catalogUrls();
+        for (int i = 0; i < urls.size(); i++) {
+            String url = urls.get(i);
+            for (int attempt = 0; attempt < 2; attempt++) {
+                if (attempt > 0) {
+                    // 第二次尝试前短暂退避，避开瞬时限流
+                    try {
+                        Thread.sleep(1200L);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }
+                }
+                try (okhttp3.Response res = OkHttp.newCall(url, channelTag(url)).execute()) {
+                    if (res.code() == 429) {
+                        // 明确被限流：不必在本通道重试，直接换下一通道
+                        break;
+                    }
+                    String body = res.body() == null ? null : res.body().string();
+                    if (body == null || body.isEmpty()) continue;
+                    String trimmed = body.trim();
+                    // 镜像可能返回 HTML 验证页：必须以 { 或 [ 开头才是 JSON
+                    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) continue;
+                    Manifest m = Manifest.parse(trimmed);
+                    if (m == null) continue;
+                    this.channel = Github.channelLabel(url);
+                    applyAsset(m.tag, m.assetUrl, m.sumsUrl);
+                    return m;
+                } catch (Exception ignored) {
+                    // 网络异常：进入下一次尝试（最多 2 次）
+                }
             }
         }
         return null;

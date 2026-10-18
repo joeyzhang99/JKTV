@@ -96,9 +96,8 @@ public class Download {
                 last = e;
             }
         }
-        // 全部通道失败：清理断点文件，回报错误
+        // 全部通道失败：保留断点文件，下次重试从断点继续（清掉会让用户从头下载）
         Path.clear(file);
-        Path.clear(part());
         String msg = last != null ? last.getMessage() : null;
         if (callback != null) App.post(() -> callback.error(msg));
         else if (last != null) throw new RuntimeException(last.getMessage(), last);
@@ -133,6 +132,10 @@ public class Download {
             boolean append = resume > 0 && res.code() == 206;
             if (!append) resume = 0;
 
+            if (res.code() == 429) {
+                // 被限流：立即换下一通道（外层循环），保留断点
+                return false;
+            }
             if (!res.isSuccessful()) return false;
 
             try (InputStream is = new BufferedInputStream(res.body().byteStream());
