@@ -80,6 +80,26 @@ public class OkHttp {
         return get().client = getBuilder().build();
     }
 
+    /**
+     * 下载专用客户端：长超时。
+     *
+     * <p>JKTV 实测：国内镜像速度仅 45–100 KB/s，默认 30 秒 readTimeout 会让
+     * 64MB APK 在下载中途 SocketTimeoutException 失败。此处放宽到 60 秒读取超时，
+     * 并关闭整体 callTimeout，允许长时间下载。</p>
+     */
+    public static synchronized OkHttpClient downloadClient() {
+        return client().newBuilder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .callTimeout(0, TimeUnit.MILLISECONDS)
+                .build();
+    }
+
+    public static Call downloadCall(String url, String tag) {
+        return downloadClient().newCall(new Request.Builder().url(url).tag(tag).build());
+    }
+
     public static synchronized OkHttpClient player() {
         if (get().player != null) return get().player;
         return get().player = getBuilder().build();

@@ -10,19 +10,27 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import okhttp3.Request;
 import okhttp3.Response;
 
 /**
- * 带多镜像重试的下载器。
+ * 带多镜像重试与断点续传的下载器。
  *
  * <p>GitHub 在国内常被阻断，因此下载时按 {@link #urls} 依次尝试：
- * 原始地址排第一，其后是各加速前缀代理的同一个地址。某一档失败会自动切到下一档，
- * 全部失败才回调 {@link Callback#error(String)}。</p>
+ * 原始地址排第一，其后是各加速前缀代理的同一个地址。</p>
+ *
+ * <p><b>断点续传</b>：国内镜像速度实测仅 45–100 KB/s，64MB APK 需要十分钟以上，
+ * 中途超时或网络抖动在所难免。已下载的部分保留在临时文件里，下次尝试从断点继续，
+ * 而不是从头再来。服务端不支持 Range 时自动退回全量下载。</p>
  */
 public class Download {
+
+    /** 断点续传用的临时文件后缀。 */
+    private static final String PART = ".part";
 
     private final File file;
     private List<String> urls;
@@ -78,38 +86,116 @@ public class Download {
         for (String url : urls) {
             if (Thread.interrupted()) return;
             this.currentUrl = url;
-            try (Response res = OkHttp.newCall(url, url).execute()) {
-                if (!res.isSuccessful()) {
-                    last = new IOException("HTTP " + res.code());
-                    continue;
+            try {
+                if (downloadOnce(url)) {
+                    if (callback != null) App.post(() -> callback.success(file));
+                    return;
                 }
-                download(res.body().byteStream(), getLength(res));
-                if (callback != null) App.post(() -> callback.success(file));
-                return;
+                last = new IOException("HTTP " + currentCode);
             } catch (Exception e) {
                 last = e;
-                Path.clear(file);
             }
         }
+        // 全部通道失败：清理断点文件，回报错误
         Path.clear(file);
+        Path.clear(part());
         String msg = last != null ? last.getMessage() : null;
         if (callback != null) App.post(() -> callback.error(msg));
         else if (last != null) throw new RuntimeException(last.getMessage(), last);
     }
 
-    private void download(InputStream is, double length) throws IOException {
-        try (BufferedInputStream input = new BufferedInputStream(is); FileOutputStream os = new FileOutputStream(Path.create(file))) {
-            byte[] buffer = new byte[16384];
-            int readBytes;
-            long totalBytes = 0;
-            while ((readBytes = input.read(buffer)) != -1) {
-                if (Thread.interrupted()) return;
-                totalBytes += readBytes;
-                os.write(buffer, 0, readBytes);
-                if (length <= 0) continue;
-                int progress = (int) (totalBytes / length * 100.0);
-                if (callback != null) App.post(() -> callback.progress(progress));
+    private int currentCode = -1;
+
+    private File part() {
+        return new File(file.getParentFile(), file.getName() + PART);
+    }
+
+    /** 已下载字节数（用于断点）。 */
+    private long downloaded() {
+        File p = part();
+        return p.exists() ? p.length() : 0L;
+    }
+
+    /**
+     * 尝试从单个通道下载（支持断点续传）。
+     *
+     * @return true 表示完整下载成功
+     */
+    private boolean downloadOnce(String url) throws IOException {
+        long resume = downloaded();
+        Request.Builder builder = new Request.Builder().url(url);
+        if (resume > 0) builder.header("Range", "bytes=" + resume + "-");
+        Request request = builder.build();
+
+        try (Response res = OkHttp.downloadClient().newCall(request).execute()) {
+            currentCode = res.code();
+            // 服务端忽略 Range（返回 200 而非 206）时，从头写
+            boolean append = resume > 0 && res.code() == 206;
+            if (!append) resume = 0;
+
+            if (!res.isSuccessful()) return false;
+
+            try (InputStream is = new BufferedInputStream(res.body().byteStream());
+                 RandomAccessFile raf = new RandomAccessFile(part(), "rw")) {
+                raf.setLength(resume);
+                raf.seek(resume);
+                long total = resume + (long) getLength(res);
+
+                byte[] buffer = new byte[32768];
+                int read;
+                long written = resume;
+                while ((read = is.read(buffer)) != -1) {
+                    if (Thread.interrupted()) return false;
+                    raf.write(buffer, 0, read);
+                    written += read;
+                    if (total <= 0) continue;
+                    int pct = (int) (written / total * 100.0);
+                    if (pct > 100) pct = 100;
+                    final int progress = pct;
+                    if (callback != null) App.post(() -> callback.progress(progress));
+                }
             }
+        }
+
+        // 校验完整性：能读出中央目录才算下载完成
+        if (!isCompleteApk(part())) return false;
+
+        // 原子替换
+        Path.clear(file);
+        if (!part().renameTo(file)) {
+            copy(part(), file);
+            Path.clear(part());
+        }
+        return true;
+    }
+
+    /** 完整性判定：ZIP 魔数 + 中央目录记录。 */
+    private static boolean isCompleteApk(File f) {
+        if (f == null || !f.exists() || f.length() < 1024) return false;
+        try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
+            byte[] head = new byte[4];
+            raf.readFully(head);
+            if (head[0] != 'P' || head[1] != 'K') return false;
+            long len = raf.length();
+            long scan = Math.min(len, 1024L * 1024L);
+            raf.seek(len - scan);
+            byte[] tail = new byte[(int) scan];
+            raf.readFully(tail);
+            for (int i = tail.length - 4; i >= 0; i--) {
+                if (tail[i] == 'P' && tail[i + 1] == 'K' && tail[i + 2] == 1 && tail[i + 3] == 2) return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void copy(File from, File to) throws IOException {
+        try (InputStream is = new java.io.FileInputStream(from);
+             FileOutputStream os = new FileOutputStream(to)) {
+            byte[] buffer = new byte[32768];
+            int read;
+            while ((read = is.read(buffer)) != -1) os.write(buffer, 0, read);
         }
     }
 
