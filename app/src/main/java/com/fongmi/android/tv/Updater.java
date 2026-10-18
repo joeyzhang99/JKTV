@@ -20,6 +20,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.security.MessageDigest;
+import java.util.Locale;
 import java.util.List;
 
 /**
@@ -57,6 +58,9 @@ public class Updater implements Download.Callback, UpdateListener {
 
     /** SHA256SUMS.txt 地址（与 XPplay 一致，用于校验下载完整性）。 */
     private String checksumsUrl;
+
+    /** 本次下载的总长度，-1 表示未知。 */
+    private long total = -1;
 
     /** 本次检查/下载实际使用的通道，用于给用户展示。 */
     private String channel = "GitHub";
@@ -283,7 +287,20 @@ public class Updater implements Download.Callback, UpdateListener {
 
     @Override
     public void progress(int progress) {
-        if (dialog != null) dialog.setProgress(progress);
+        if (dialog != null && this.total > 0) dialog.setProgress(progress);
+    }
+
+    /** 总长未知时展示「已下载 x MB」，让用户知道确实在下载。 */
+    @Override
+    public void progress(long downloaded, long total) {
+        this.total = total;
+        if (dialog == null) return;
+        if (total > 0) {
+            dialog.setProgress((int) Math.min(100, downloaded / total * 100));
+        } else {
+            dialog.setText(String.format(Locale.getDefault(), "%.1f MB",
+                    downloaded / 1024f / 1024f));
+        }
     }
 
     @Override

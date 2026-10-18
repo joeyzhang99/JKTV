@@ -65,6 +65,11 @@ public class UpdateDialog extends BaseAlertDialog {
         if (dialog != null) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> listener.onConfirm(view));
     }
 
+    /** 进度未知时显示已下载体积。 */
+    public void setText(String text) {
+        binding.confirm.setText(text);
+    }
+
     public void setProgress(int progress) {
         AlertDialog dialog = (AlertDialog) getDialog();
         if (dialog != null) dialog.getButton(AlertDialog.BUTTON_POSITIVE).setText(String.format(Locale.getDefault(), "%1$d%%", progress));

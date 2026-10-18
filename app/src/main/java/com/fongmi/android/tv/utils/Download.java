@@ -91,7 +91,7 @@ public class Download {
                     if (callback != null) App.post(() -> callback.success(file));
                     return;
                 }
-                last = new IOException("HTTP " + currentCode);
+                last = new IOException("HTTP " + currentCode + " via " + hostOf(url));
             } catch (Exception e) {
                 last = e;
             }
@@ -148,11 +148,25 @@ public class Download {
                     if (Thread.interrupted()) return false;
                     raf.write(buffer, 0, read);
                     written += read;
-                    if (total <= 0) continue;
-                    int pct = (int) (written / total * 100.0);
+                    // 总长未知（镜像返回 chunked）时仍要上报进度，否则界面永远停在 0%。
+                    // 用已下载量折算一个"看起来在走"的百分比并封顶 99%——
+                    // 真正下载完成时才会置 100，避免用户误以为卡死。
+                    int pct;
+                    if (total > 0) {
+                        pct = (int) (written / total * 100.0);
+                    } else {
+                        long mb = written / (1024 * 1024);
+                        pct = (int) Math.min(99, Math.max(1, mb * 100 / 12));
+                    }
                     if (pct > 100) pct = 100;
                     final int progress = pct;
-                    if (callback != null) App.post(() -> callback.progress(progress));
+                    if (callback != null) {
+                        final int pr = progress;
+                        final long done = written;
+                        final long tot = total;
+                        App.post(() -> callback.progress(pr));
+                        App.post(() -> callback.progress(done, tot));
+                    }
                 }
             }
         }
@@ -190,6 +204,19 @@ public class Download {
         }
     }
 
+    /** 取 URL 的 host，报错时用于定位是哪条通道失败。 */
+    private static String hostOf(String url) {
+        try {
+            int i = url.indexOf("://");
+            if (i < 0) return url;
+            int start = i + 3;
+            int end = url.indexOf('/', start);
+            return end < 0 ? url.substring(start) : url.substring(start, end);
+        } catch (Exception e) {
+            return url;
+        }
+    }
+
     private static void copy(File from, File to) throws IOException {
         try (InputStream is = new java.io.FileInputStream(from);
              FileOutputStream os = new FileOutputStream(to)) {
@@ -199,18 +226,43 @@ public class Download {
         }
     }
 
+    /**
+     * 响应总长度。
+     *
+     * <p>JKTV 实测：GitHub Release 经镜像代理时，302 跳转后的响应可能不带
+     * {@code Content-Length}（chunked 传输）。旧实现此时返回 -1，
+     * 导致进度回调被跳过，界面永远停在 0%——实际数据是在下载的。</p>
+     *
+     * <p>因此依次尝试：{@code Content-Length} → {@code Content-Range} 里的总长
+     * （形如 {@code bytes 0-100/64914071}）。</p>
+     */
     private double getLength(Response res) {
         try {
             String header = res.header(HttpHeaders.CONTENT_LENGTH);
-            return header != null ? Double.parseDouble(header) : -1;
-        } catch (Exception e) {
-            return -1;
+            if (header != null) return Double.parseDouble(header);
+        } catch (Exception ignored) {
         }
+        try {
+            String range = res.header("Content-Range"); // bytes 0-100/64914071
+            if (range != null) {
+                int slash = range.lastIndexOf('/');
+                if (slash > 0 && slash < range.length() - 1) {
+                    String total = range.substring(slash + 1).trim();
+                    if (!"*".equals(total)) return Double.parseDouble(total);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return -1;
     }
 
     public interface Callback {
 
         void progress(int progress);
+
+        /** 进度未知时的已下载字节数（用于显示「已下载 x MB」）。 */
+        default void progress(long downloaded, long total) {
+        }
 
         void error(String msg);
 

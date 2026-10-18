@@ -64,6 +64,11 @@ public class UpdateDialog extends BaseAlertDialog {
         binding.cancel.setOnClickListener(this::onCancel);
     }
 
+    /** 进度未知时显示已下载体积。 */
+    public void setText(String text) {
+        binding.confirm.setText(text);
+    }
+
     public void setProgress(int progress) {
         binding.confirm.setText(String.format(Locale.getDefault(), "%1$d%%", progress));
     }
