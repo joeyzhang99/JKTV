@@ -29,6 +29,11 @@ import okhttp3.Response;
  */
 public class Download {
 
+    /** 下载用 UA：GitHub CDN 对空 UA 请求会挂起。 */
+    private static final String UA =
+            "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 (KHTML, like Gecko) "
+            + "Chrome/120.0.0.0 Mobile Safari/537.36";
+
     /** 断点续传用的临时文件后缀。 */
     private static final String PART = ".part";
 
@@ -123,6 +128,10 @@ public class Download {
     private boolean downloadOnce(String url) throws IOException {
         long resume = downloaded();
         Request.Builder builder = new Request.Builder().url(url);
+        // JKTV 实测（2026-10-20）：GitHub Release 的 CDN 对无 UA 的请求会挂起超时，
+        // 带浏览器 UA 才返回 206。原版 FongMi 能直连升级成功也是走这条路。
+        builder.header("User-Agent", UA);
+        builder.header("Accept", "*/*");
         if (resume > 0) builder.header("Range", "bytes=" + resume + "-");
         Request request = builder.build();
 

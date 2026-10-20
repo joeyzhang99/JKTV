@@ -50,7 +50,14 @@ public class Github {
     private static final String RELEASES_BASE =
             "https://github.com/" + REPO + "/releases/download";
 
-    /** 加速前缀，按尝试顺序（gh-proxy.com 实测更快，置前）。 */
+    /**
+     * 加速前缀（仅作兜底）。
+     *
+     * <p>2026-10-20 实机对照发现：原版 FongMi 升级成功走的是<b>完全直连</b>
+     * （api.github.com 查版本 + github.com/release CDN 下 APK，无任何镜像），
+     * 实测国内移动网络下 API 0.4s 可用、CDN 下载 79–106 KB/s。
+     * 因此 JKTV 也改为<b>直连优先</b>，镜像仅在前者失败时兜底。</p>
+     */
     public static final List<String> PREFIXES = List.of(
             "https://gh-proxy.com/",
             "https://ghproxy.net/"
@@ -110,8 +117,10 @@ public class Github {
             urls.add(all.get(channel));
             for (String u : all) if (!urls.contains(u)) urls.add(u);
         } else {
-            // 内置顺序：API 直连 → 代理 API ×2 → 代理 raw ×2 → jsDelivr
+            // 内置顺序（照 FongMi：直连优先）
+            // 0 API直连 → 6 raw直连 → 1/2 代理API → 3/4 代理raw → 5 jsDelivr
             urls.add(all.get(0));
+            urls.add(all.get(6));
             urls.add(all.get(1));
             urls.add(all.get(2));
             urls.add(all.get(3));

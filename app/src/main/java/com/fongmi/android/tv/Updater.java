@@ -47,6 +47,11 @@ public class Updater implements Download.Callback, UpdateListener {
 
     private static final int TIMEOUT_MS = 12000;
 
+    /** 更新检查用 UA：GitHub API 对空 UA 返回 403。 */
+    private static final String UA =
+            "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 (KHTML, like Gecko) "
+            + "Chrome/120.0.0.0 Mobile Safari/537.36";
+
     private final Download download;
     private UpdateDialog dialog;
 
@@ -175,7 +180,12 @@ public class Updater implements Download.Callback, UpdateListener {
                         return null;
                     }
                 }
-                try (okhttp3.Response res = OkHttp.newCall(url, channelTag(url)).execute()) {
+                okhttp3.Request req = new okhttp3.Request.Builder()
+                        .url(url)
+                        .header("User-Agent", UA)
+                        .header("Accept", "application/vnd.github+json")
+                        .build();
+                try (okhttp3.Response res = OkHttp.client().newCall(req).execute()) {
                     if (res.code() == 429) {
                         // 明确被限流：不必在本通道重试，直接换下一通道
                         break;
