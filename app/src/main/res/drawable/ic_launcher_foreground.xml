@@ -1,42 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- JKTV 电镀字 · Arial Black 真实字形轮廓。
+     修复两处：①手写 pathData 导致 V 倒置/粗细不一 ②墨迹宽度误算成单字宽度导致字母重叠。
+     整串墨迹 296×72px，位于 launcher 66% 安全区内。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-    <group
-        android:scaleX="0.62"
-        android:scaleY="0.62"
-        android:translateX="97.3"
-        android:translateY="97.3">
-    <!-- JKTV 电镀金属字（确认稿 c2，整体缩进 66% 安全区：×0.62 居中，
-         否则 launcher 遮罩会裁掉左右字母——电视实拍已复现） -->
-         字形以粗几何笔画构造（Arial Black 风格的简化路径），
-         上层白→银渐变模拟电镀高光，下层深银做厚度，1px 亮边描边。 -->
-    <!-- 背光晕（蓝，径向近似：多层同心椭圆透明度递减） -->
+
+    <!-- 蓝色背光 -->
     <path android:fillColor="#1E88E5" android:fillAlpha="0.10"
-        android:pathData="M256,252 m-210,0 a210,145 0 1,0 420,0 a210,145 0 1,0 -420,0" />
-    <path android:fillColor="#1E88E5" android:fillAlpha="0.14"
-        android:pathData="M256,252 m-150,0 a150,105 0 1,0 300,0 a150,105 0 1,0 -300,0" />
-    <path android:fillColor="#1E88E5" android:fillAlpha="0.18"
-        android:pathData="M256,252 m-100,0 a100,70 0 1,0 200,0 a100,70 0 1,0 -200,0" />
+        android:pathData="M256,256 m-180,0 a180,118 0 1,0 360,0 a180,118 0 1,0 -360,0" />
+    <path android:fillColor="#1E88E5" android:fillAlpha="0.13"
+        android:pathData="M256,256 m-128,0 a128,84 0 1,0 256,0 a128,84 0 1,0 -256,0" />
+    <path android:fillColor="#1E88E5" android:fillAlpha="0.16"
+        android:pathData="M256,256 m-82,0 a82,54 0 1,0 164,0 a82,54 0 1,0 -164,0" />
 
-    <!-- ===== J ===== -->
-    <!-- 下层厚度 -->
-    <path android:fillColor="#5A6B85" android:pathData="M96,196 h46 v96 a44,44 0 0 1 -88,0 v-26 h46 v22 a4,4 0 0 0 8,0 v-92 z"/>
-    <!-- 上层电镀面 -->
-    <path android:fillColor="#E8F0FA" android:pathData="M92,192 h46 v96 a44,44 0 0 1 -88,0 v-26 h46 v22 a4,4 0 0 0 8,0 v-92 z"/>
-    <!-- ===== K ===== -->
-    <path android:fillColor="#5A6B85" android:pathData="M158,196 h46 v58 l52,-58 h56 l-64,70 66,78 h-58 l-52,-62 v62 h-46 z"/>
-    <path android:fillColor="#E8F0FA" android:pathData="M154,192 h46 v58 l52,-58 h56 l-64,70 66,78 h-58 l-52,-62 v62 h-46 z"/>
-    <!-- ===== T ===== -->
-    <path android:fillColor="#5A6B85" android:pathData="M280,196 h118 v40 h-36 v108 h-46 v-108 h-36 z"/>
-    <path android:fillColor="#E8F0FA" android:pathData="M276,192 h118 v40 h-36 v108 h-46 v-108 h-36 z"/>
-    <!-- ===== V ===== -->
-    <path android:fillColor="#5A6B85" android:pathData="M414,196 h48 l26,148 h-46 l-6,-44 h-20 l-6,44 h-46 z m10,104 h16 l-8,-52 z"/>
-    <path android:fillColor="#E8F0FA" android:pathData="M410,192 h48 l26,148 h-46 l-6,-44 h-20 l-6,44 h-46 z m10,104 h16 l-8,-52 z"/>
+    <path android:fillColor="#2E9BF0"
+        android:pathData="M187.9,318.1 h136.2 v3.5 h-136.2 z" />
 
-    <!-- 分隔线 -->
-    <path android:fillColor="#1E88E5" android:pathData="M166,334 h180 v4 h-180 z"/>
+    <!-- 下层金属厚度 -->
+    <group
+        android:translateX="106.3"
+        android:translateY="293.08"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#3E4E68" android:pathData="M760 1466H1214V669Q1214 418 1169.5 287.0Q1125 156 990.5 65.0Q856 -26 646 -26Q424 -26 302.0 34.0Q180 94 113.5 209.5Q47 325 35 495L468 554Q469 457 485.0 410.0Q501 363 539 334Q565 315 613 315Q689 315 724.5 371.5Q760 428 760 562Z" />
     </group>
-
+    <group
+        android:translateX="172.48"
+        android:translateY="293.08"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#3E4E68" android:pathData="M152 1466H605V912L1080 1466H1682L1148 913L1706 0H1148L839 603L605 358V0H152Z" />
+    </group>
+    <group
+        android:translateX="255.13"
+        android:translateY="293.08"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#3E4E68" android:pathData="M47 1466H1424V1104H962V0H509V1104H47Z" />
+    </group>
+    <group
+        android:translateX="326.78"
+        android:translateY="293.08"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#3E4E68" android:pathData="M5 1466H479L809 411L1134 1466H1594L1050 0H559Z" />
+    </group>
+    <!-- 上层电镀面 -->
+    <group
+        android:translateX="106.3"
+        android:translateY="290.88"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#F2F8FE" android:pathData="M760 1466H1214V669Q1214 418 1169.5 287.0Q1125 156 990.5 65.0Q856 -26 646 -26Q424 -26 302.0 34.0Q180 94 113.5 209.5Q47 325 35 495L468 554Q469 457 485.0 410.0Q501 363 539 334Q565 315 613 315Q689 315 724.5 371.5Q760 428 760 562Z" />
+    </group>
+    <group
+        android:translateX="172.48"
+        android:translateY="290.88"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#F2F8FE" android:pathData="M152 1466H605V912L1080 1466H1682L1148 913L1706 0H1148L839 603L605 358V0H152Z" />
+    </group>
+    <group
+        android:translateX="255.13"
+        android:translateY="290.88"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#F2F8FE" android:pathData="M47 1466H1424V1104H962V0H509V1104H47Z" />
+    </group>
+    <group
+        android:translateX="326.78"
+        android:translateY="290.88"
+        android:scaleX="0.048445"
+        android:scaleY="-0.048445">
+        <path android:fillColor="#F2F8FE" android:pathData="M5 1466H479L809 411L1134 1466H1594L1050 0H559Z" />
+    </group>
 </vector>
