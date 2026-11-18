@@ -176,6 +176,11 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.group.setListener(this);
         mBinding.channel.setListener(this);
         mBinding.epgData.setListener(this);
+        // 长按节目条打开多频道时间轴节目单（TV Guide）
+        mBinding.epgData.setOnLongClickListener(v -> {
+            TvGuideActivity.start(this);
+            return true;
+        });
         mBinding.control.action.text.setOnClickListener(this::onTrack);
         mBinding.control.action.audio.setOnClickListener(this::onTrack);
         mBinding.control.action.video.setOnClickListener(this::onTrack);
@@ -275,7 +280,38 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         List<Group> items = new ArrayList<>();
         for (Group group : live.getGroups()) (group.isHidden() ? mHides : items).add(group);
         mGroupAdapter.addAll(items);
+        if (applyGuideTarget(items)) return;
         setPosition(LiveConfig.get().findKeepPosition(items));
+    }
+
+    /**
+     * 从 TV Guide 跳转过来时，直接定位到用户选中的频道。
+     *
+     * @return true 表示已定位成功，调用方应跳过默认的「记忆位置」恢复
+     */
+    private boolean applyGuideTarget(List<Group> items) {
+        String name = getIntent().getStringExtra("guide_channel");
+        if (name == null || name.isEmpty()) return false;
+        String groupName = getIntent().getStringExtra("guide_group");
+        getIntent().removeExtra("guide_channel");
+        getIntent().removeExtra("guide_group");
+        for (int gi = 0; gi < items.size(); gi++) {
+            Group group = items.get(gi);
+            if (groupName != null && !groupName.isEmpty() && !groupName.equals(group.getName())) continue;
+            List<Channel> channels = group.getChannel();
+            for (int ci = 0; ci < channels.size(); ci++) {
+                Channel channel = channels.get(ci);
+                if (!name.equals(channel.getName()) && !name.equals(channel.getNumber())) continue;
+                mGroup = group;
+                mBinding.group.setSelectedPosition(gi);
+                mGroupAdapter.addAll(items);
+                group.setPosition(ci);
+                onItemClick(group);
+                onItemClick(channel);
+                return true;
+            }
+        }
+        return false;
     }
 
     private void setWidth(Live live) {

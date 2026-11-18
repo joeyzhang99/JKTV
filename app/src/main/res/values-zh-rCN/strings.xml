@@ -250,4 +250,9 @@
         <item>选择字幕</item>
     </string-array>
 
+    <string name="guide_title">节目单</string>
+    <string name="guide_hint">▲▼ 换台   ◀▶ 选节目   OK 播放</string>
+    <string name="guide_empty">暂无节目单数据</string>
+    <string name="guide_no_channel">没有频道</string>
+    <string name="guide_play">播放</string>
 </resources>

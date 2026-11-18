@@ -266,4 +266,9 @@
         <item>Select subtitle track</item>
     </string-array>
 
+    <string name="guide_title">TV Guide</string>
+    <string name="guide_hint">CH ▲▼  ·  Program ◀▶  ·  OK play</string>
+    <string name="guide_empty">No EPG data</string>
+    <string name="guide_no_channel">No channels</string>
+    <string name="guide_play">Play</string>
 </resources>
