@@ -1,8 +1,8 @@
 {
-  "code": 100,
-  "name": "JKTV-V1.0.0",
-  "notes": "首个版本：频道导入（M3U / Xtream）、直播播放、节目单、应用内更新",
-  "apk": "https://github.com/joeyzhang99/JKTV/releases/download/player-v1.0.0/JKTV-V1.0.0-release.apk",
-  "sha256": "3684be65dc778a3e629bd2c332cd67a3cf27119fc18d1ebf1e2fe3a932a55940",
-  "size": 9819356
+  "code": 101,
+  "name": "JKTV-V1.0.1",
+  "notes": "- 主界面改为三栏：导航 / 频道分组 / 预览+节目单\n- 节目单：真实台标、回看标记、正在播放标识（蓝名+箭头）\n- 设置页改为分组面板：通用 / 播放源 / EPG / 播放 / 其他\n- 配色与行高按参照界面实测校准（背景 #121619、行高 52dp）",
+  "apk": "https://github.com/joeyzhang99/JKTV/releases/download/player-v1.0.1/JKTV-V1.0.1-release.apk",
+  "sha256": "834e303478bfbd5f7b53828400fa388047d0e2d8c2bdfd546ad546cdd1ec44cd",
+  "size": 9833781
 }
