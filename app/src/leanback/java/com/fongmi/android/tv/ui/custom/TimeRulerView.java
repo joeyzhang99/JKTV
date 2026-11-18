@@ -11,25 +11,36 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
 /**
  * TV Guide 顶部时间刻度尺。
  *
- * <p>与节目行共用 {@link GuideTimeline#pxPerMin} 与同一滚动偏移，因此刻度始终对齐节目块。</p>
+ * <p>左侧固定格显示日期与当前时间，右侧每 30 分钟一格、整点标注。
+ * 与节目行共用同一 pxPerMin 与滚动偏移，因此刻度始终对齐节目块边界。</p>
  */
 public class TimeRulerView extends View {
 
+    private static final int C_BG = 0xFF131619;
+    private static final int C_TICK = 0xFF313336;
+    private static final int C_TEXT = 0xFF9AA3AD;
+    private static final int C_ACCENT = 0xFF90CAF9;
+    private static final int C_NOW = 0xFF4A6A8A;
+
     private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint accentPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF tmp = new RectF();
     private final SimpleDateFormat hourFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("M月d日EEE", Locale.getDefault());
 
     private float offsetPx;
     private float channelWidth;
     private float pxPerMin;
+    private final float density;
     private long dayStart;
 
     public TimeRulerView(Context context) {
@@ -38,14 +49,16 @@ public class TimeRulerView extends View {
 
     public TimeRulerView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        float d = getResources().getDisplayMetrics().density;
+        density = getResources().getDisplayMetrics().density;
         setWillNotDraw(false);
-        bgPaint.setColor(0xFF14171E);
-        tickPaint.setColor(0xFF3A4152);
-        tickPaint.setStrokeWidth(Math.max(1f, d));
-        textPaint.setColor(0xFFB7C0D0);
-        textPaint.setTextSize(13f * d);
-        textPaint.setAntiAlias(true);
+        bgPaint.setColor(C_BG);
+        accentPaint.setColor(C_ACCENT);
+        accentPaint.setFakeBoldText(true);
+        accentPaint.setTextSize(15f * density);
+        tickPaint.setColor(C_TICK);
+        tickPaint.setStrokeWidth(Math.max(1f, density));
+        textPaint.setColor(C_TEXT);
+        textPaint.setTextSize(13f * density);
         channelWidth = GuideTimeline.channelWidth(context);
         pxPerMin = GuideTimeline.pxPerMin(context);
         dayStart = GuideTimeline.dayStart();
@@ -57,48 +70,50 @@ public class TimeRulerView extends View {
         invalidate();
     }
 
+    public void refresh() {
+        long ds = GuideTimeline.dayStart();
+        if (ds != dayStart) dayStart = ds;
+        invalidate();
+    }
+
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
         float h = getHeight();
         float w = getWidth();
 
-        // 左侧频道列背景（与节目区的刻度区分）
-        canvas.drawRect(0, 0, channelWidth, h, bgPaint);
+        canvas.drawRect(0, 0, w, h, bgPaint);
+
+        // 左侧：日期 + 当前时间（黄色调强调，参照界面同位置）
+        String date = dateFormat.format(new Date());
+        canvas.drawText(date, 10f * density, h * 0.66f, accentPaint);
 
         canvas.save();
         canvas.clipRect(channelWidth, 0, w, h);
 
-        // 每 30 分钟一个刻度，整点加长并标时间
-        int stepMin = 30;
-        int totalMin = 24 * 60;
-        for (int m = 0; m <= totalMin; m += stepMin) {
+        for (int m = 0; m <= 24 * 60; m += 30) {
             float cx = channelWidth + m * pxPerMin - offsetPx;
             if (cx < channelWidth - 2 || cx > w + 2) continue;
             boolean hour = (m % 60 == 0);
-            float top = hour ? h * 0.34f : h * 0.58f;
-            canvas.drawLine(cx, top, cx, h, tickPaint);
+            canvas.drawLine(cx, hour ? h * 0.42f : h * 0.62f, cx, h, tickPaint);
             if (hour) {
                 long t = dayStart + m * 60000L;
-                String label = hourFormat.format(new Date(t));
-                canvas.drawText(label, cx + 4f * getResources().getDisplayMetrics().density, top - 4f, textPaint);
+                canvas.drawText(hourFormat.format(new Date(t)), cx + 6f * density,
+                        h * 0.66f, textPaint);
             }
         }
 
-        // 当前时间指示
         float nx = channelWidth + GuideTimeline.nowX(dayStart, pxPerMin) - offsetPx;
         if (nx >= channelWidth && nx <= w) {
-            tickPaint.setColor(0xFFE53935);
+            tickPaint.setColor(C_NOW);
             canvas.drawLine(nx, 0, nx, h, tickPaint);
-            tickPaint.setColor(0xFF3A4152);
+            tickPaint.setColor(C_TICK);
         }
 
         canvas.restore();
 
-        // 底部细分隔线
-        tickPaint.setColor(0xFF2A2F3C);
+        tickPaint.setColor(0xFF313336);
         canvas.drawLine(0, h - 1, w, h - 1, tickPaint);
-        tickPaint.setColor(0xFF3A4152);
     }
 
     @Override

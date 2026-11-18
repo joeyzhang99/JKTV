@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -12,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.bean.Channel;
@@ -32,22 +35,28 @@ import java.util.Locale;
 /**
  * TV Guide：多频道时间轴节目单。
  *
- * <p>交互：上下切换频道，左右切换节目，OK 播放，返回退出。</p>
+ * <p>上方显示当前选中频道与节目的信息，下方是频道×时间网格。</p>
  *
- * <p>实现说明：所有行共享同一横向偏移（平移而非各自滚动），
- * 因此刻度尺与节目块永远对齐。JKTV 原创实现。</p>
+ * <p>交互：上下切换频道，左右切换节目，OK 播放，返回退出。</p>
  */
 public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.Callback {
-
-    private static final long PAN_STEP_DP = 40;
 
     private final Handler ticker = new Handler(Looper.getMainLooper());
     private final SimpleDateFormat clockFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
 
     private TimeRulerView ruler;
     private RecyclerView recycler;
-    private TextView clock;
     private GuideAdapter adapter;
+
+    private ImageView previewLogo;
+    private TextView previewNumber;
+    private TextView channelName;
+    private TextView programTitle;
+    private TextView programTime;
+    private TextView programRemain;
+    private TextView programDesc;
+    private TextView groupName;
+    private ProgressBar programProgress;
 
     private final List<Channel> rows = new ArrayList<>();
     private float offsetPx;
@@ -58,8 +67,8 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         @Override
         public void run() {
             if (paused) return;
-            if (clock != null) clock.setText(clockFormat.format(new Date()));
             syncRows();
+            updateInfoPanel(adapter == null ? -1 : adapter.getActiveIndex());
             ticker.postDelayed(this, 1000L);
         }
     };
@@ -73,15 +82,25 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tv_guide);
         density = getResources().getDisplayMetrics().density;
-        ruler = findViewById(R.id.ruler);
-        clock = findViewById(R.id.clock);
-        recycler = findViewById(R.id.recycler);
+        bindViews();
 
         loadChannels();
         setupRecycler();
         initOffset();
+    }
 
-        clock.setText(clockFormat.format(new Date()));
+    private void bindViews() {
+        ruler = findViewById(R.id.ruler);
+        recycler = findViewById(R.id.recycler);
+        previewLogo = findViewById(R.id.previewLogo);
+        previewNumber = findViewById(R.id.previewNumber);
+        channelName = findViewById(R.id.channelName);
+        programTitle = findViewById(R.id.programTitle);
+        programTime = findViewById(R.id.programTime);
+        programRemain = findViewById(R.id.programRemain);
+        programDesc = findViewById(R.id.programDesc);
+        groupName = findViewById(R.id.groupName);
+        programProgress = findViewById(R.id.programProgress);
     }
 
     private void loadChannels() {
@@ -89,13 +108,7 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         Live live = LiveConfig.get().getHome();
         if (live == null) return;
         for (Group group : live.getGroups()) {
-            for (Channel channel : group.getChannel()) {
-                rows.add(channel);
-            }
-        }
-        if (rows.isEmpty()) {
-            TextView title = findViewById(R.id.title);
-            if (title != null) title.setText(R.string.guide_no_channel);
+            for (Channel channel : group.getChannel()) rows.add(channel);
         }
     }
 
@@ -107,20 +120,18 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         recycler.setItemAnimator(null);
         recycler.post(() -> {
             if (recycler.getChildCount() > 0) {
-                View first = recycler.getChildAt(0);
-                first.requestFocus();
+                recycler.getChildAt(0).requestFocus();
                 onRowFocused(0);
             }
         });
     }
 
-    /** 初始把时间轴对到当前时间，留出一小时左侧余量。 */
     private void initOffset() {
         float ppm = GuideTimeline.pxPerMin(this);
         float cw = GuideTimeline.channelWidth(this);
         float viewport = getResources().getDisplayMetrics().widthPixels - cw;
-        float start = GuideTimeline.x(System.currentTimeMillis(), GuideTimeline.dayStart(), ppm) - viewport / 3f;
-        offsetPx = clamp(start, 0, Math.max(0, GuideTimeline.dayWidth(this) - viewport));
+        float now = GuideTimeline.x(System.currentTimeMillis(), GuideTimeline.dayStart(), ppm);
+        offsetPx = clamp(now - viewport / 4f, 0, Math.max(0, GuideTimeline.dayWidth(this) - viewport));
         applyOffset();
     }
 
@@ -130,12 +141,11 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
     }
 
     private void syncRows() {
-        // 让可见行重画「正在播出」与当前时间线；顺带处理跨天切换
         for (int i = 0; i < recycler.getChildCount(); i++) {
             View v = recycler.getChildAt(i);
             if (v instanceof GuideRowView) ((GuideRowView) v).refreshTimes();
         }
-        if (ruler != null) ruler.invalidate();
+        if (ruler != null) ruler.refresh();
     }
 
     private float clamp(float v, float min, float max) {
@@ -150,26 +160,24 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         offsetPx = clamp(offsetPx, 0, Math.max(0, GuideTimeline.dayWidth(this) - viewportWidth()));
     }
 
-    /** 平移时间轴，保证光标所在节目完整可见。 */
     private void ensureCursorVisible(int rowIndex) {
         View v = findRowView(rowIndex);
         if (!(v instanceof GuideRowView)) return;
         GuideRowView row = (GuideRowView) v;
         List<EpgData> programs = row.getPrograms();
         int cursor = row.getCursor();
-        if (cursor < 0 || cursor >= programs.size()) return;
-
-        EpgData d = programs.get(cursor);
         float ppm = GuideTimeline.pxPerMin(this);
         long dayStart = GuideTimeline.dayStart();
-        float x1 = GuideTimeline.x(d.getStartTime(), dayStart, ppm);
-        float x2 = GuideTimeline.x(d.getEndTime(), dayStart, ppm);
         float vw = viewportWidth();
-        float margin = 20 * density;
+        float margin = 24 * density;
 
-        if (x1 - margin < offsetPx) offsetPx = x1 - margin;
-        else if (x2 + margin > offsetPx + vw) offsetPx = x2 + margin - vw;
-
+        if (cursor >= 0 && cursor < programs.size()) {
+            EpgData d = programs.get(cursor);
+            float x1 = GuideTimeline.x(d.getStartTime(), dayStart, ppm);
+            float x2 = GuideTimeline.x(d.getEndTime(), dayStart, ppm);
+            if (x1 - margin < offsetPx) offsetPx = x1 - margin;
+            else if (x2 + margin > offsetPx + vw) offsetPx = x2 + margin - vw;
+        }
         clampOffset();
         applyOffset();
     }
@@ -182,6 +190,73 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         return null;
     }
 
+    /** 刷新上方信息面板。 */
+    private void updateInfoPanel(int index) {
+        if (index < 0 || index >= rows.size()) {
+            channelName.setText("");
+            programTitle.setText(R.string.guide_no_channel);
+            programTime.setText("");
+            programRemain.setText("");
+            programProgress.setProgress(0);
+            programDesc.setText("");
+            groupName.setText("");
+            previewNumber.setText("");
+            previewLogo.setImageDrawable(null);
+            return;
+        }
+
+        Channel channel = rows.get(index);
+        Group group = channel.getGroup();
+        groupName.setText(group == null ? "" : group.getName());
+        channelName.setText(channel.getName());
+
+        String number = channel.getNumber();
+        previewNumber.setText(number == null || number.isEmpty() ? "" : number);
+
+        if (channel.getLogo() != null && !channel.getLogo().isEmpty()) {
+            Glide.with(this).load(channel.getLogo()).into(previewLogo);
+        } else {
+            previewLogo.setImageDrawable(null);
+        }
+
+        View rowView = findRowView(index);
+        EpgData current = null;
+        if (rowView instanceof GuideRowView) {
+            GuideRowView row = (GuideRowView) rowView;
+            List<EpgData> programs = row.getPrograms();
+            int cursor = row.getCursor();
+            if (cursor >= 0 && cursor < programs.size()) current = programs.get(cursor);
+        }
+
+        long now = System.currentTimeMillis();
+        if (current == null) {
+            programTitle.setText(R.string.guide_no_info);
+            programTime.setText("");
+            programRemain.setText("");
+            programProgress.setProgress(0);
+            programDesc.setText("");
+            return;
+        }
+
+        programTitle.setText(current.getTitle() == null || current.getTitle().isEmpty()
+                ? getString(R.string.guide_no_info) : current.getTitle());
+        programTime.setText(clockFormat.format(new Date(current.getStartTime()))
+                + " - " + clockFormat.format(new Date(current.getEndTime())));
+
+        long total = Math.max(1, current.getEndTime() - current.getStartTime());
+        long elapsed = Math.max(0, Math.min(total, now - current.getStartTime()));
+        programProgress.setProgress((int) (elapsed * 100 / total));
+
+        long remainMs = current.getEndTime() - now;
+        if (remainMs > 0) {
+            programRemain.setText(getString(R.string.guide_minutes, String.valueOf(remainMs / 60000)));
+        } else {
+            programRemain.setText("");
+        }
+
+        programDesc.setText("");
+    }
+
     @Override
     public void onRowFocused(int index) {
         if (adapter == null) return;
@@ -189,13 +264,13 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         View v = findRowView(index);
         if (v instanceof GuideRowView) {
             GuideRowView row = (GuideRowView) v;
-            int cursor = row.getCursor();
-            if (cursor < 0) {
+            if (row.getCursor() < 0) {
                 int airing = row.indexOfAiring();
                 row.setCursor(airing >= 0 ? airing : row.indexAt(System.currentTimeMillis()));
             }
         }
         ensureCursorVisible(index);
+        updateInfoPanel(index);
     }
 
     @Override
@@ -204,19 +279,24 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         if (!(v instanceof GuideRowView)) return;
         GuideRowView row = (GuideRowView) v;
         int size = row.getPrograms().size();
-        if (size == 0) return;
+        if (size == 0) {
+            offsetPx += delta * 60 * density;
+            clampOffset();
+            applyOffset();
+            return;
+        }
         int cursor = row.getCursor();
         if (cursor < 0) cursor = row.indexOfAiring();
         int next = Math.max(0, Math.min(size - 1, cursor + delta));
         if (next == cursor) {
-            // 已在边界：把时间轴继续平移，允许浏览空档
-            offsetPx += delta * PAN_STEP_DP * density;
+            offsetPx += delta * 60 * density;
             clampOffset();
             applyOffset();
             return;
         }
         row.setCursor(next);
         ensureCursorVisible(index);
+        updateInfoPanel(index);
     }
 
     @Override
@@ -226,8 +306,8 @@ public class TvGuideActivity extends AppCompatActivity implements GuideAdapter.C
         Intent intent = new Intent(this, LiveActivity.class);
         intent.putExtra("empty", false);
         intent.putExtra("guide_channel", channel.getName());
-        String groupName = channel.getGroup() == null ? "" : channel.getGroup().getName();
-        intent.putExtra("guide_group", groupName);
+        String gn = channel.getGroup() == null ? "" : channel.getGroup().getName();
+        intent.putExtra("guide_group", gn);
         startActivity(intent);
         finish();
     }

@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ui.custom;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
@@ -12,6 +13,9 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
 import com.fongmi.android.tv.bean.Channel;
 import com.fongmi.android.tv.bean.EpgData;
 
@@ -22,32 +26,35 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * TV Guide 中的一行：左侧固定频道信息 + 右侧按时间轴排布的节目块。
+ * TV Guide 单行：左侧固定频道信息（台号 / 台标 / 名称 / 回看标记）+ 右侧时间轴节目块。
  *
- * <p>所有行共享同一个 {@code offsetPx}，用平移而非真实滚动实现横向同步，
- * 因此上下滚动时不会出现错位。JKTV 原创实现。</p>
+ * <p>无 EPG 数据时按整点绘制占位块，保证网格形态完整可读。</p>
+ *
+ * <p>所有行共享同一个横向偏移，用平移而非真实滚动实现同步，滚动时不会错位。</p>
  */
 public class GuideRowView extends View {
 
-    private static final int C_BG = 0xFF171B24;
-    private static final int C_BG_ALT = 0xFF1B2029;
-    private static final int C_CH_CELL = 0xFF1F2531;
-    private static final int C_PROGRAM = 0xFF2A3140;
-    private static final int C_PROGRAM_AIRING = 0xFF1F5C4A;
-    private static final int C_CURSOR = 0xFF2F6BFF;
-    private static final int C_TEXT = 0xFFEDF1F7;
-    private static final int C_TEXT_DIM = 0xFF8E98A8;
-    private static final int C_DIVIDER = 0xFF262C38;
-    private static final int C_NOW = 0xFFE53935;
+    // 取自参照界面实测色值
+    private static final int C_ROW_A = 0xFF131619;
+    private static final int C_ROW_B = 0xFF171B1F;
+    private static final int C_BLOCK = 0xFF424547;
+    private static final int C_BLOCK_FOCUS = 0xFFDEE0E2;
+    private static final int C_BLOCK_ALT = 0xFF3A3D3F;
+    private static final int C_TEXT = 0xFFD6D9DC;
+    private static final int C_TEXT_ON_FOCUS = 0xFF1A1D21;
+    private static final int C_TEXT_DIM = 0xFF8A9096;
+    private static final int C_DIVIDER = 0xFF313336;
+    private static final int C_LOGO_BG = 0xFF232629;
+    private static final int C_ACCENT = 0xFF90CAF9;
 
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint namePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint numberPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint titlePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint metaPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    private final TextPaint channelPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    private final TextPaint numberPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-    private final TextPaint placeholderPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
+    private final RectF logoRect = new RectF();
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
 
     private final float density;
@@ -61,6 +68,8 @@ public class GuideRowView extends View {
     private int cursor = -1;
     private int rowIndex;
     private boolean active;
+    private Bitmap logo;
+    private CustomTarget<Bitmap> logoTarget;
 
     public GuideRowView(Context context) {
         this(context, null);
@@ -73,37 +82,66 @@ public class GuideRowView extends View {
         pxPerMin = GuideTimeline.pxPerMin(context);
         dayStart = GuideTimeline.dayStart();
 
+        namePaint.setColor(0xFFEDF1F7);
+        namePaint.setTextSize(15f * density);
+        numberPaint.setColor(C_TEXT_DIM);
+        numberPaint.setTextSize(13f * density);
         titlePaint.setColor(C_TEXT);
         titlePaint.setTextSize(14f * density);
-        titlePaint.setFakeBoldText(true);
-
         metaPaint.setColor(C_TEXT_DIM);
         metaPaint.setTextSize(11f * density);
-
-        channelPaint.setColor(C_TEXT);
-        channelPaint.setTextSize(13f * density);
-
-        numberPaint.setColor(C_TEXT_DIM);
-        numberPaint.setTextSize(11f * density);
-
-        placeholderPaint.setColor(C_TEXT_DIM);
-        placeholderPaint.setTextSize(16f * density);
-        placeholderPaint.setTextAlign(Paint.Align.CENTER);
-        placeholderPaint.setFakeBoldText(true);
-
         stroke.setStyle(Paint.Style.STROKE);
         stroke.setStrokeWidth(Math.max(1f, density));
         setWillNotDraw(false);
         setFocusable(false);
     }
 
-    /** 绑定数据。cursor 为 -1 表示该行不显示选中框。 */
     public void bind(Channel channel, int rowIndex, int cursor) {
         this.channel = channel;
         this.rowIndex = rowIndex;
         this.cursor = cursor;
         this.programs = GuideTimeline.today(channel, dayStart);
         invalidate();
+        loadLogo();
+    }
+
+    private void loadLogo() {
+        if (logoTarget != null) {
+            Glide.with(this).clear(logoTarget);
+            logoTarget = null;
+        }
+        logo = null;
+        if (channel == null) return;
+        String url = channel.getLogo();
+        if (url == null || url.isEmpty()) return;
+        int size = (int) (rowHeightPx() - 8 * density);
+        if (size <= 0) return;
+        logoTarget = new CustomTarget<Bitmap>(size, size) {
+            @Override
+            public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                logo = resource;
+                invalidate();
+            }
+
+            @Override
+            public void onLoadCleared(@Nullable android.graphics.drawable.Drawable placeholder) {
+                logo = null;
+                invalidate();
+            }
+        };
+        Glide.with(this).asBitmap().load(url).into(logoTarget);
+    }
+
+    public void clearLogo() {
+        if (logoTarget != null) {
+            Glide.with(this).clear(logoTarget);
+            logoTarget = null;
+        }
+        logo = null;
+    }
+
+    private float rowHeightPx() {
+        return GuideTimeline.rowHeight(getContext());
     }
 
     public Channel getChannel() {
@@ -136,6 +174,10 @@ public class GuideRowView extends View {
         invalidate();
     }
 
+    public Bitmap getLogo() {
+        return logo;
+    }
+
     public void refreshTimes() {
         long ds = GuideTimeline.dayStart();
         if (ds != dayStart) {
@@ -145,7 +187,7 @@ public class GuideRowView extends View {
         invalidate();
     }
 
-    /** 当前时间正在播出的节目下标，找不到返回 -1。 */
+    /** 正在播出的节目下标；无数据返回 -1。 */
     public int indexOfAiring() {
         long now = System.currentTimeMillis();
         for (int i = 0; i < programs.size(); i++) {
@@ -155,7 +197,7 @@ public class GuideRowView extends View {
         return -1;
     }
 
-    /** 距离给定时间最近、且已开始的节目下标，用于初始化光标。 */
+    /** 已开始且最接近给定时间的节目下标。 */
     public int indexAt(long timeMs) {
         int best = -1;
         for (int i = 0; i < programs.size(); i++) {
@@ -167,9 +209,7 @@ public class GuideRowView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int w = MeasureSpec.getSize(widthMeasureSpec);
-        int h = (int) GuideTimeline.rowHeight(getContext());
-        setMeasuredDimension(w, h);
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), (int) rowHeightPx());
     }
 
     @Override
@@ -180,112 +220,162 @@ public class GuideRowView extends View {
         channelWidth = GuideTimeline.channelWidth(getContext());
         pxPerMin = GuideTimeline.pxPerMin(getContext());
 
-        // 行底
-        fill.setColor(rowIndex % 2 == 0 ? C_BG : C_BG_ALT);
+        fill.setColor(rowIndex % 2 == 0 ? C_ROW_A : C_ROW_B);
         canvas.drawRect(0, 0, w, h, fill);
 
         drawChannelCell(canvas, h);
         drawPrograms(canvas, w, h);
 
-        // 行分隔线
         fill.setColor(C_DIVIDER);
         canvas.drawRect(0, h - Math.max(1f, density), w, h, fill);
     }
 
     private void drawChannelCell(Canvas canvas, float h) {
-        fill.setColor(C_CH_CELL);
-        canvas.drawRect(0, 0, channelWidth, h, fill);
-
         if (channel == null) return;
 
-        // 台标占位块
-        float pad = 8f * density;
-        float box = h - pad * 2;
-        rect.set(pad, pad, pad + box, h - pad);
-        fill.setColor(0xFF2E3546);
-        canvas.drawRoundRect(rect, 6f * density, 6f * density, fill);
+        float pad = 4f * density;
+        float box = 40f * density;
+        float logoLeft = 63f * density;
 
-        String initial = "";
-        String name = channel.getName() == null ? "" : channel.getName();
-        if (!name.isEmpty()) initial = name.substring(0, 1);
-        canvas.drawText(initial, rect.centerX(), rect.centerY() + placeholderPaint.getTextSize() * 0.36f, placeholderPaint);
-
-        float textLeft = rect.right + 8f * density;
-        float textRight = channelWidth - 6f * density;
-        if (textRight <= textLeft) return;
-
-        String number = channel.getNumber() == null ? "" : channel.getNumber();
-        if (!number.isEmpty()) {
-            canvas.drawText(number, textLeft, pad + numberPaint.getTextSize(), numberPaint);
+        // 台标（有图则绘制，无图绘制圆角底色 + 首字）
+        logoRect.set(logoLeft, pad, logoLeft + box, h - pad);
+        if (logo != null) {
+            canvas.save();
+            canvas.clipRect(logoRect);
+            canvas.drawBitmap(logo, null, logoRect, null);
+            canvas.restore();
+        } else {
+            fill.setColor(C_LOGO_BG);
+            canvas.drawRoundRect(logoRect, 5f * density, 5f * density, fill);
+            String name = channel.getName() == null ? "" : channel.getName();
+            if (!name.isEmpty()) {
+                metaPaint.setColor(C_TEXT_DIM);
+                metaPaint.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(name.substring(0, 1), logoRect.centerX(),
+                        logoRect.centerY() + metaPaint.getTextSize() * 0.36f, metaPaint);
+                metaPaint.setTextAlign(Paint.Align.LEFT);
+            }
         }
 
-        CharSequence shown = TextUtils.ellipsize(name, channelPaint, textRight - textLeft, TextUtils.TruncateAt.END);
-        canvas.drawText(shown.toString(), textLeft, h * 0.68f, channelPaint);
+        // 台号
+        String number = channel.getNumber();
+        if (number == null || number.isEmpty()) number = String.valueOf(rowIndex + 1);
+        canvas.drawText(number, 30f * density, h * 0.62f, numberPaint);
+
+        // 台名
+        float nameLeft = 143f * density;
+        float nameRight = channelWidth - 8f * density;
+        if (nameRight > nameLeft) {
+            CharSequence shown = TextUtils.ellipsize(
+                    channel.getName() == null ? "" : channel.getName(),
+                    namePaint, nameRight - nameLeft, TextUtils.TruncateAt.END);
+            canvas.drawText(shown.toString(), nameLeft, h * 0.62f, namePaint);
+        }
+
+        // 回看标记（支持 catchup 的频道）
+        if (channel.getCatchup() != null && !channel.getCatchup().isEmpty()) {
+            drawCatchupIcon(canvas, channelWidth - 20f * density, h * 0.5f);
+        }
+    }
+
+    /** 回看标记：圆圈 + 回转箭头，简洁不抢眼。 */
+    private void drawCatchupIcon(Canvas canvas, float cx, float cy) {
+        float r = 7f * density;
+        stroke.setColor(C_ACCENT);
+        stroke.setStyle(Paint.Style.STROKE);
+        stroke.setStrokeWidth(Math.max(1.4f, 1.4f * density));
+        canvas.drawCircle(cx, cy, r, stroke);
+        float hand = r * 0.62f;
+        canvas.drawLine(cx, cy, cx, cy - hand, stroke);
+        canvas.drawLine(cx, cy, cx + hand * 0.8f, cy, stroke);
+        stroke.setStrokeWidth(Math.max(1f, density));
     }
 
     private void drawPrograms(Canvas canvas, float w, float h) {
         canvas.save();
         canvas.clipRect(channelWidth, 0, w, h);
 
-        if (programs.isEmpty()) {
-            metaPaint.setColor(C_TEXT_DIM);
-            canvas.drawText("暂无节目单", channelWidth + 14f * density, h * 0.58f, metaPaint);
-            canvas.restore();
-            drawActiveBorder(canvas, w, h);
-            return;
-        }
-
         long now = System.currentTimeMillis();
-        float inset = 2f * density;
-        float radius = 6f * density;
+        float inset = 3f * density;
+        float radius = 5f * density;
+        float gap = 1.5f * density;
 
-        for (int i = 0; i < programs.size(); i++) {
-            EpgData d = programs.get(i);
-            float x1 = channelWidth + GuideTimeline.x(d.getStartTime(), dayStart, pxPerMin) - offsetPx;
-            float x2 = channelWidth + GuideTimeline.x(d.getEndTime(), dayStart, pxPerMin) - offsetPx;
-            if (x2 < channelWidth || x1 > w) continue;
+        if (programs.isEmpty()) {
+            drawPlaceholders(canvas, w, h, inset, radius, gap);
+        } else {
+            for (int i = 0; i < programs.size(); i++) {
+                EpgData d = programs.get(i);
+                float x1 = channelWidth + GuideTimeline.x(d.getStartTime(), dayStart, pxPerMin) - offsetPx;
+                float x2 = channelWidth + GuideTimeline.x(d.getEndTime(), dayStart, pxPerMin) - offsetPx;
+                if (x2 < channelWidth || x1 > w) continue;
 
-            boolean airing = d.getStartTime() <= now && now < d.getEndTime();
-            boolean selected = active && i == cursor;
-
-            rect.set(x1 + 1f, inset, x2 - 1f, h - inset);
-            fill.setColor(selected ? C_CURSOR : airing ? C_PROGRAM_AIRING : C_PROGRAM);
-            canvas.drawRoundRect(rect, radius, radius, fill);
-
-            if (rect.width() < 28f * density) continue;
-
-            float tx = rect.left + 8f * density;
-            float available = rect.width() - 16f * density;
-
-            CharSequence title = TextUtils.ellipsize(d.getTitle() == null ? "" : d.getTitle(),
-                    titlePaint, available, TextUtils.TruncateAt.END);
-            canvas.drawText(title.toString(), tx, h * 0.46f, titlePaint);
-
-            String range = timeFormat.format(new Date(d.getStartTime()))
-                    + " - " + timeFormat.format(new Date(d.getEndTime()));
-            CharSequence meta = TextUtils.ellipsize(range, metaPaint, available, TextUtils.TruncateAt.END);
-            canvas.drawText(meta.toString(), tx, h * 0.74f, metaPaint);
+                boolean selected = active && i == cursor;
+                boolean airing = d.getStartTime() <= now && now < d.getEndTime();
+                drawBlock(canvas, x1 + gap, inset, x2 - gap, h - inset, radius,
+                        selected, airing, d.getTitle(), d.getStartTime(), d.getEndTime(), h);
+            }
         }
 
         canvas.restore();
 
-        // 当前时间竖线
         float nx = channelWidth + GuideTimeline.nowX(dayStart, pxPerMin) - offsetPx;
         if (nx >= channelWidth && nx <= w) {
-            stroke.setColor(C_NOW);
+            stroke.setColor(0xFF4A6A8A);
+            stroke.setStrokeWidth(Math.max(1f, density));
             canvas.drawLine(nx, 0, nx, h, stroke);
         }
 
-        drawActiveBorder(canvas, w, h);
+        if (active) {
+            stroke.setColor(C_ACCENT);
+            stroke.setStrokeWidth(2f * density);
+            rect.set(density, density, w - density, h - density);
+            canvas.drawRoundRect(rect, 3f * density, 3f * density, stroke);
+            stroke.setStrokeWidth(Math.max(1f, density));
+        }
     }
 
-    private void drawActiveBorder(Canvas canvas, float w, float h) {
-        if (!active) return;
-        stroke.setColor(C_CURSOR);
-        stroke.setStrokeWidth(2f * density);
-        float half = density;
-        rect.set(half, half, w - half, h - half);
-        canvas.drawRoundRect(rect, 4f * density, 4f * density, stroke);
-        stroke.setStrokeWidth(Math.max(1f, density));
+    /** 无 EPG 时按整点画占位块。 */
+    private void drawPlaceholders(Canvas canvas, float w, float h, float inset, float radius, float gap) {
+        long now = System.currentTimeMillis();
+        for (int m = 0; m < 24 * 60; m += GuideTimeline.PLACEHOLDER_MIN) {
+            long start = dayStart + m * 60000L;
+            long end = start + GuideTimeline.PLACEHOLDER_MIN * 60000L;
+            float x1 = channelWidth + GuideTimeline.x(start, dayStart, pxPerMin) - offsetPx;
+            float x2 = channelWidth + GuideTimeline.x(end, dayStart, pxPerMin) - offsetPx;
+            if (x2 < channelWidth || x1 > w) continue;
+            boolean airing = start <= now && now < end;
+            drawBlock(canvas, x1 + gap, inset, x2 - gap, h - inset, radius,
+                    false, airing, "", start, end, h);
+        }
+    }
+
+    private void drawBlock(Canvas canvas, float l, float t, float r, float b, float radius,
+                           boolean selected, boolean airing, String title,
+                           long startTime, long endTime, float h) {
+        if (r - l < 1f) return;
+        rect.set(l, t, r, b);
+        if (selected) fill.setColor(C_BLOCK_FOCUS);
+        else if (airing) fill.setColor(C_BLOCK_ALT);
+        else fill.setColor(C_BLOCK);
+        canvas.drawRoundRect(rect, radius, radius, fill);
+
+        float avail = rect.width() - 12f * density;
+        if (avail < 24f * density) return;
+
+        int textColor = selected ? C_TEXT_ON_FOCUS : C_TEXT;
+        int dimColor = selected ? 0xFF4A4F55 : C_TEXT_DIM;
+
+        String label = (title == null || title.isEmpty())
+                ? getContext().getString(com.fongmi.android.tv.R.string.guide_no_info)
+                : title;
+
+        titlePaint.setColor(textColor);
+        CharSequence shownTitle = TextUtils.ellipsize(label, titlePaint, avail, TextUtils.TruncateAt.END);
+        canvas.drawText(shownTitle.toString(), rect.left + 6f * density, h * 0.44f, titlePaint);
+
+        String range = timeFormat.format(new Date(startTime)) + " - " + timeFormat.format(new Date(endTime));
+        metaPaint.setColor(dimColor);
+        CharSequence shownRange = TextUtils.ellipsize(range, metaPaint, avail, TextUtils.TruncateAt.END);
+        canvas.drawText(shownRange.toString(), rect.left + 6f * density, h * 0.72f, metaPaint);
     }
 }

@@ -75,6 +75,10 @@ public class GuideAdapter extends RecyclerView.Adapter<GuideAdapter.Holder> {
         return cursor;
     }
 
+    public int getActiveIndex() {
+        return activeIndex;
+    }
+
     private int getRowCount() {
         return attached == null ? 0 : attached.getChildCount();
     }
@@ -145,6 +149,12 @@ public class GuideAdapter extends RecyclerView.Adapter<GuideAdapter.Holder> {
             return false;
         });
         row.setOnClickListener(v -> callback.onPlay(holder.getBindingAdapterPosition()));
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull Holder holder) {
+        super.onViewRecycled(holder);
+        if (holder.itemView instanceof GuideRowView) ((GuideRowView) holder.itemView).clearLogo();
     }
 
     static class Holder extends RecyclerView.ViewHolder {

@@ -20,6 +20,12 @@
             android:text="@string/play_config" />
 
         <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/guide"
+            style="@style/Control"
+            android:layout_marginEnd="12dp"
+            android:text="@string/guide_title" />
+
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/home"
             style="@style/Control"
             android:layout_marginEnd="12dp"

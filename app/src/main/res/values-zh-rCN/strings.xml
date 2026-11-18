@@ -255,4 +255,6 @@
     <string name="guide_empty">暂无节目单数据</string>
     <string name="guide_no_channel">没有频道</string>
     <string name="guide_play">播放</string>
+    <string name="guide_no_info">无信息</string>
+    <string name="guide_minutes">%s 分钟</string>
 </resources>

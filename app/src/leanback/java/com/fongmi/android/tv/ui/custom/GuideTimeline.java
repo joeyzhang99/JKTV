@@ -18,14 +18,17 @@ import java.util.List;
  */
 public final class GuideTimeline {
 
-    /** 每分钟对应多少 dp。1 小时 = 180dp，半小时的节目块足够放下标题。 */
-    private static final float DP_PER_MIN = 3.0f;
+    /** 每分钟对应多少 dp。1 小时 ≈ 427dp，与主流 IPTV 客户端的可读密度一致。 */
+    private static final float DP_PER_MIN = 7.0f;
 
     /** 频道列宽度（dp）。左侧固定，不随时间轴滚动。 */
-    public static final float CHANNEL_WIDTH_DP = 132f;
+    public static final float CHANNEL_WIDTH_DP = 340f;
 
     /** 行高（dp）。 */
-    public static final float ROW_HEIGHT_DP = 62f;
+    public static final float ROW_HEIGHT_DP = 40f;
+
+    /** 无 EPG 数据时，占位块的时间跨度（分钟）。 */
+    public static final int PLACEHOLDER_MIN = 60;
 
     private static final long DAY_MS = 24L * 60 * 60 * 1000;
 
