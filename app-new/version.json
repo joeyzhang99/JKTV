@@ -1,8 +1,8 @@
 {
-  "code": 101,
-  "name": "JKTV-V1.0.1",
-  "notes": "- 主界面改为三栏：导航 / 频道分组 / 预览+节目单\n- 节目单：真实台标、回看标记、正在播放标识（蓝名+箭头）\n- 设置页改为分组面板：通用 / 播放源 / EPG / 播放 / 其他\n- 配色与行高按参照界面实测校准（背景 #121619、行高 52dp）",
-  "apk": "https://github.com/joeyzhang99/JKTV/releases/download/player-v1.0.1/JKTV-V1.0.1-release.apk",
-  "sha256": "834e303478bfbd5f7b53828400fa388047d0e2d8c2bdfd546ad546cdd1ec44cd",
-  "size": 9833781
+  "code": 102,
+  "name": "JKTV-V1.0.2",
+  "notes": "原付费功能全部免费开放并已实现：\n- 通用：开机自启、睡眠唤醒自启、恢复上次频道、主页键画中画、返回键确认退出、User-Agent、UDP代理、备份/恢复\n- 播放源：启用开关、改名、改网址、EPG源、UA、更新频率、启动时更新、删除\n- EPG：保存往期天数、保存节目介绍、更新频率、启动时更新、变更源时更新、更新/清空EPG、最近更新状态\n- 播放：缓冲大小、音频/视频解码、AFR自动帧率、环绕声优先、音频直通、隧道播放、第三方播放器\n- 新增：外观、遥控器、家长控制",
+  "apk": "https://github.com/joeyzhang99/JKTV/releases/download/player-v1.0.2/JKTV-V1.0.2-release.apk",
+  "sha256": "50101e724d05c21234d97d395adae78139c9ae2f95fad2263c818e58a5b8a91f",
+  "size": 9849537
 }
