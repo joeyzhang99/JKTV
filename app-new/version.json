@@ -1,0 +1,8 @@
+{
+  "code": 100,
+  "name": "JKTV-V1.0.0",
+  "notes": "首个版本：频道导入（M3U / Xtream）、直播播放、节目单、应用内更新",
+  "apk": "https://github.com/joeyzhang99/JKTV/releases/download/player-v1.0.0/JKTV-V1.0.0-release.apk",
+  "sha256": "3684be65dc778a3e629bd2c332cd67a3cf27119fc18d1ebf1e2fe3a932a55940",
+  "size": 9819356
+}
